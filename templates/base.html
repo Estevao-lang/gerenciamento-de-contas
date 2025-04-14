@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerenciador de Contas Domésticas</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <i class="fas fa-wallet fa-2x"></i>
+        <h2>Contas Domésticas</h2>
+      </div>
+      <ul class="sidebar-nav">
+        <li><a href="{{ url_for('index') }}" class="{% if request.path == url_for('index') %}active{% endif %}">
+          <i class="fas fa-home"></i> Dashboard
+        </a></li>
+        <li><a href="{{ url_for('adicionar_conta') }}" class="{% if request.path == url_for('adicionar_conta') %}active{% endif %}">
+          <i class="fas fa-plus-circle"></i> Adicionar Conta
+        </a></li>
+        <li><a href="{{ url_for('listar_contas') }}" class="{% if request.path == url_for('listar_contas') %}active{% endif %}">
+          <i class="fas fa-list"></i> Todas as Contas
+        </a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

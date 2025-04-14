@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Lista de Contas</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Descrição</th>
+            <th>Valor</th>
+            <th>Vencimento</th>
+            <th>Categoria</th>
+            <th>Status</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for conta in contas %}
+        <tr>
+            <td>{{ conta.descricao }}</td>
+            <td>R$ {{ "%.2f"|format(conta.valor) }}</td>
+            <td>{{ conta.data_vencimento.strftime('%d/%m/%Y') }}</td>
+            <td>{{ conta.categoria }}</td>
+            <td>{{ 'Paga' if conta.paga else 'Pendente' }}</td>
+            <td>
+                {% if not conta.paga %}
+                <a href="{{ url_for('pagar_conta', id=conta.id) }}">Marcar como Paga</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

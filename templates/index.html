@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="header">
+  <h1>Dashboard</h1>
+  <div class="actions">
+    <a href="{{ url_for('adicionar_conta') }}" class="btn btn-primary">
+      <i class="fas fa-plus"></i> Adicionar Conta
+    </a>
+  </div>
+</div>
+
+<div class="stats-cards">
+  <div class="card">
+    <div class="card-header">
+      <h3>Total Pago</h3>
+      <i class="fas fa-check-circle fa-2x" style="color: var(--success);"></i>
+    </div>
+    <p class="card-value card-income">R$ {{ "%.2f"|format(total_pago) }}</p>
+    <p>Este mês</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3>Total Pendente</h3>
+      <i class="fas fa-exclamation-circle fa-2x" style="color: var(--danger);"></i>
+    </div>
+    <p class="card-value card-expense">R$ {{ "%.2f"|format(total_pendente) }}</p>
+    <p>Este mês</p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3>Saldo</h3>
+      <i class="fas fa-wallet fa-2x" style="color: var(--primary);"></i>
+    </div>
+    <p class="card-value card-balance">R$ {{ "%.2f"|format(total_pago - total_pendente) }}</p>
+    <p>Disponível</p>
+  </div>
+</div>
+
+<h2>Últimas Contas</h2>
+<table class="transactions-table">
+  <thead>
+    <tr>
+      <th>Descrição</th>
+      <th>Valor</th>
+      <th>Vencimento</th>
+      <th>Categoria</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for conta in ultimas_contas %}
+    <tr>
+      <td>{{ conta.descricao }}</td>
+      <td>R$ {{ "%.2f"|format(conta.valor) }}</td>
+      <td>{{ conta.data_vencimento.strftime('%d/%m/%Y') }}</td>
+      <td>{{ conta.categoria }}</td>
+      <td>
+        <span class="status-badge status-{% if conta.paga %}paid{% else %}pending{% endif %}">
+          {% if conta.paga %}Pago{% else %}Pendente{% endif %}
+        </span>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
