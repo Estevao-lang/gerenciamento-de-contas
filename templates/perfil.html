@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0"><i class="bi bi-person-circle"></i> Meu Perfil</h4>
+        </div>
+        
+        <div class="card-body">
+            <form method="POST">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="nome" class="form-label">Nome Completo</label>
+                        <input type="text" class="form-control" id="nome" name="nome" 
+                               value="{{ current_user.nome }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ current_user.email }}" required>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="saldo" class="form-label">Saldo Atual (R$)</label>
+                        <input type="text" class="form-control" id="saldo" name="saldo" 
+                               value="{{ '%.2f' | format(current_user.saldo) | replace('.', ',') }}" 
+                               required>
+                        <small class="text-muted">Formato: 1.234,56</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="limite_alerta" class="form-label">Limite de Alerta (R$)</label>
+                        <input type="text" class="form-control" id="limite_alerta" name="limite_alerta" 
+                               value="{{ '%.2f' | format(current_user.limite_alerta) | replace('.', ',') }}" 
+                               required>
+                        <small class="text-muted">Formato: 1.234,56</small>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

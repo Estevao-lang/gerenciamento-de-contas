@@ -1,33 +1,72 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Lista de Contas</h2>
-<table>
-    <thead>
-        <tr>
-            <th>Descrição</th>
-            <th>Valor</th>
-            <th>Vencimento</th>
-            <th>Categoria</th>
-            <th>Status</th>
-            <th>Ações</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for conta in contas %}
-        <tr>
-            <td>{{ conta.descricao }}</td>
-            <td>R$ {{ "%.2f"|format(conta.valor) }}</td>
-            <td>{{ conta.data_vencimento.strftime('%d/%m/%Y') }}</td>
-            <td>{{ conta.categoria }}</td>
-            <td>{{ 'Paga' if conta.paga else 'Pendente' }}</td>
-            <td>
-                {% if not conta.paga %}
-                <a href="{{ url_for('pagar_conta', id=conta.id) }}">Marcar como Paga</a>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="bi bi-list-check"></i> Lista de Contas</h2>
+    
+    <div class="table-responsive">
+        <table class="table table-hover table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>Descrição</th>
+                    <th>Valor (R$)</th>
+                    <th>Vencimento</th>
+                    <th>Status</th>
+                    <th>Categoria</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for conta in contas %}
+                <tr class="{% if conta.dias_vencimento < 3 and not conta.paga %}table-warning{% endif %}">
+                    <td>{{ conta.descricao }}</td>
+                    <td>{{ "R$ {:,.2f}".format(conta.valor).replace(',', 'v').replace('.', ',').replace('v', '.') }}</td>
+                    <td>{{ conta.data_vencimento.strftime('%d/%m/%Y') }}</td>
+                    <td>
+                        {% if conta.paga %}
+                            <span class="badge bg-success">Paga</span>
+                        {% else %}
+                            <span class="badge bg-{% if conta.dias_vencimento < 0 %}danger{% else %}primary{% endif %}">
+                                {% if conta.dias_vencimento < 0 %}
+                                    Atrasada {{ -conta.dias_vencimento }} dia(s)
+                                {% else %}
+                                    Vence em {{ conta.dias_vencimento }} dia(s)
+                                {% endif %}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>{{ conta.categoria }}</td>
+                    <td>
+                        <a href="{{ url_for('editar_conta', id=conta.id) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{{ url_for('excluir_conta', id=conta.id) }}" class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('Tem certeza que deseja excluir esta conta?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                        {% if not conta.paga %}
+                            <a href="{{ url_for('pagar_conta', id=conta.id) }}" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-check2"></i> Pagar
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center">Nenhuma conta cadastrada</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{{ url_for('adicionar_conta') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Adicionar Nova Conta
+        </a>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-house"></i> Voltar ao Início
+        </a>
+    </div>
+</div>
 {% endblock %}

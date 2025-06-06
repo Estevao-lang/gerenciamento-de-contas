@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-pencil"></i> Editar Conta</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição</label>
+                        <input type="text" class="form-control" id="descricao" name="descricao" value="{{ conta.descricao }}" required>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="valor" class="form-label">Valor (R$)</label>
+                            <input type="number" step="0.01" class="form-control" id="valor" name="valor" value="{{ conta.valor }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="data_vencimento" class="form-label">Data de Vencimento</label>
+                            <input type="date" class="form-control" id="data_vencimento" name="data_vencimento" 
+                                   value="{{ conta.data_vencimento.strftime('%Y-%m-%d') }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="categoria" class="form-label">Categoria</label>
+                        <select class="form-select" id="categoria" name="categoria" required>
+                            <option value="Moradia" {% if conta.categoria == 'Moradia' %}selected{% endif %}>Moradia</option>
+                            <option value="Alimentação" {% if conta.categoria == 'Alimentação' %}selected{% endif %}>Alimentação</option>
+                            <option value="Transporte" {% if conta.categoria == 'Transporte' %}selected{% endif %}>Transporte</option>
+                            <option value="Saúde" {% if conta.categoria == 'Saúde' %}selected{% endif %}>Saúde</option>
+                            <option value="Educação" {% if conta.categoria == 'Educação' %}selected{% endif %}>Educação</option>
+                            <option value="Lazer" {% if conta.categoria == 'Lazer' %}selected{% endif %}>Lazer</option>
+                            <option value="Outros" {% if conta.categoria == 'Outros' %}selected{% endif %}>Outros</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="paga" name="paga" {% if conta.paga %}checked{% endif %}>
+                        <label class="form-check-label" for="paga">Conta paga</label>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('listar_contas') }}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Atualizar Conta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

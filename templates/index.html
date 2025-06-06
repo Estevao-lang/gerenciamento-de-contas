@@ -1,69 +1,85 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="header">
-  <h1>Dashboard</h1>
-  <div class="actions">
-    <a href="{{ url_for('adicionar_conta') }}" class="btn btn-primary">
-      <i class="fas fa-plus"></i> Adicionar Conta
-    </a>
-  </div>
+<div class="text-center mb-5">
+    <h1>Dashboard Financeiro</h1>
+    <p class="lead text-muted">Gerencie suas finanças de forma eficiente e inteligente</p>
 </div>
 
-<div class="stats-cards">
-  <div class="card">
-    <div class="card-header">
-      <h3>Total Pago</h3>
-      <i class="fas fa-check-circle fa-2x" style="color: var(--success);"></i>
+<div class="stats-container">
+    <!-- Novo cartão para o Saldo -->
+    <div class="stats-card balance">
+        <h5 class="card-title">Saldo Atual</h5>
+        <h2 class="card-text">R$ {{ current_user.saldo | round(2) }}</h2>
     </div>
-    <p class="card-value card-income">R$ {{ "%.2f"|format(total_pago) }}</p>
-    <p>Este mês</p>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <h3>Total Pendente</h3>
-      <i class="fas fa-exclamation-circle fa-2x" style="color: var(--danger);"></i>
+    
+    <div class="stats-card paid">
+        <h5 class="card-title">Total Pago</h5>
+        <h2 class="card-text">R$ {{ total_pago | round(2) }}</h2>
     </div>
-    <p class="card-value card-expense">R$ {{ "%.2f"|format(total_pendente) }}</p>
-    <p>Este mês</p>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <h3>Saldo</h3>
-      <i class="fas fa-wallet fa-2x" style="color: var(--primary);"></i>
+    
+    <div class="stats-card pending">
+        <h5 class="card-title">Total Pendente</h5>
+        <h2 class="card-text">R$ {{ total_pendente | round(2) }}</h2>
     </div>
-    <p class="card-value card-balance">R$ {{ "%.2f"|format(total_pago - total_pendente) }}</p>
-    <p>Disponível</p>
-  </div>
 </div>
 
-<h2>Últimas Contas</h2>
-<table class="transactions-table">
-  <thead>
-    <tr>
-      <th>Descrição</th>
-      <th>Valor</th>
-      <th>Vencimento</th>
-      <th>Categoria</th>
-      <th>Status</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for conta in ultimas_contas %}
-    <tr>
-      <td>{{ conta.descricao }}</td>
-      <td>R$ {{ "%.2f"|format(conta.valor) }}</td>
-      <td>{{ conta.data_vencimento.strftime('%d/%m/%Y') }}</td>
-      <td>{{ conta.categoria }}</td>
-      <td>
-        <span class="status-badge status-{% if conta.paga %}paid{% else %}pending{% endif %}">
-          {% if conta.paga %}Pago{% else %}Pendente{% endif %}
-        </span>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-calendar-check"></i> Próximas Contas a Vencer
+    </div>
+    
+    <div class="card-body">
+        {% if proximas_contas %}
+        <div class="table-container">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Descrição</th>
+                        <th>Valor</th>
+                        <th>Vencimento</th>
+                        <th>Categoria</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for conta in proximas_contas %}
+                    <tr>
+                        <td>{{ conta.descricao }}</td>
+                        <td>R$ {{ conta.valor | round(2) }}</td>
+                        <td>{{ conta.data_vencimento.strftime('%d/%m/%Y') }}</td>
+                        <td><span class="badge bg-secondary">{{ conta.categoria }}</span></td>
+                        <td class="btn-group">
+                            <a href="{{ url_for('pagar_conta', id=conta.id) }}" class="btn btn-sm btn-success">
+                                <i class="bi bi-check-lg"></i> Pagar
+                            </a>
+                            <a href="{{ url_for('editar_conta', id=conta.id) }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-pencil"></i> Editar
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="bi bi-info-circle"></i> Nenhuma conta pendente próxima.
+        </div>
+        {% endif %}
+        
+        <div class="btn-group">
+            <a href="{{ url_for('adicionar_conta') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Adicionar Nova Conta
+            </a>
+            <a href="{{ url_for('listar_contas') }}" class="btn btn-outline-primary">
+                <i class="bi bi-list"></i> Ver Todas as Contas
+            </a>
+            <!-- Novo botão para Compras -->
+            <a href="{{ url_for('listar_listas_compras') }}" class="btn btn-warning">
+                <i class="bi bi-cart"></i> Compras
+            </a>
+        </div>
+    </div>
+</div>
 {% endblock %}
