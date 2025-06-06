@@ -4,6 +4,8 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import os
+import matplotlib
+matplotlib.use('Agg')  # Configuração para evitar conflitos de thread
 import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
@@ -11,23 +13,16 @@ import smtplib
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 import re
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Carregar variáveis de ambiente
 load_dotenv()
 
 app = Flask(__name__, static_folder='static')
+app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret_key')
+
 # Configuração do PostgreSQL para Render.com
-render_db_user = 'gerencismento_contas_user'
-render_db_password = 'SUA_SENHA_REAL'  # Obtenha esta do dashboard do Render
-render_db_host = 'dpg-d110bsh5pdvs73efmph0-a'
-render_db_port = '5432'
-render_db_name = 'gerencismento_contas'
-
-# Construa a string de conexão
-render_db_url = f'postgresql://{render_db_user}:{render_db_password}@{render_db_host}:{render_db_port}/{render_db_name}'
-
-# Configuração do SQLAlchemy
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', render_db_url)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -38,26 +33,28 @@ login_manager.login_view = 'login'
 def parse_brl_number(value):
     """Converte string no formato brasileiro (1.234,56) para float"""
     try:
-        # Remove pontos de milhar e substitui vírgula decimal por ponto
-        cleaned = value.replace('.', '').replace(',', '.')
+        cleaned = value.replace('R$', '').strip()
+        cleaned = cleaned.replace('.', '').replace(',', '.')
         return float(cleaned)
     except (ValueError, TypeError):
         return None
 
 # Função para formatar valores em moeda brasileira
 def format_currency(value):
-    return "R$ {:,.2f}".format(value).replace(',', 'v').replace('.', ',').replace('v', '.')
+    if value is None:
+        return "R$ 0,00"
+    return f"R$ {value:,.2f}".replace(',', 'temp').replace('.', ',').replace('temp', '.')
 
 # Modelo de Usuário
 class Usuario(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    senha = db.Column(db.String(100), nullable=False)
+    senha = db.Column(db.String(200), nullable=False)  # Aumentado para hash
     limite_alerta = db.Column(db.Float, default=1000.0)
-    saldo = db.Column(db.Float, default=0.0)  # Campo ESSENCIAL adicionado
-    contas = db.relationship('Conta', backref='usuario', lazy=True)
-    listas_compras = db.relationship('ListaCompras', backref='usuario', lazy=True)
+    saldo = db.Column(db.Float, default=0.0)
+    contas = db.relationship('Conta', backref='usuario', lazy=True, cascade="all, delete-orphan")
+    listas_compras = db.relationship('ListaCompras', backref='usuario', lazy=True, cascade="all, delete-orphan")
 
 # Modelo de Conta
 class Conta(db.Model):
@@ -66,7 +63,7 @@ class Conta(db.Model):
     valor = db.Column(db.Float, nullable=False)
     data_vencimento = db.Column(db.Date, nullable=False)
     paga = db.Column(db.Boolean, default=False)
-    categoria = db.Column(db.String(50))
+    categoria = db.Column(db.String(50), default="Outros")
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     
     @property
@@ -74,25 +71,25 @@ class Conta(db.Model):
         hoje = datetime.today().date()
         return (self.data_vencimento - hoje).days
 
-# Novo modelo: Item da lista de compras
+# Modelo: Item da lista de compras
 class ItemLista(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     descricao = db.Column(db.String(200), nullable=False)
     valor = db.Column(db.Float, nullable=False)
     lista_id = db.Column(db.Integer, db.ForeignKey('lista_compras.id'), nullable=False)
 
-# Novo modelo: Lista de compras
+# Modelo: Lista de compras
 class ListaCompras(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     titulo = db.Column(db.String(100), nullable=False)
-    data_criacao = db.Column(db.Date, nullable=False, default=datetime.today().date)
+    data_criacao = db.Column(db.Date, nullable=False, default=datetime.today)
     finalizada = db.Column(db.Boolean, default=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     itens = db.relationship('ItemLista', backref='lista', lazy=True, cascade="all, delete-orphan")
     
     @property
     def total(self):
-        return sum(item.valor for item in self.itens)
+        return sum(item.valor for item in self.itens) if self.itens else 0
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -100,7 +97,7 @@ def load_user(user_id):
 
 def enviar_email(destinatario, assunto, corpo):
     try:
-        msg = MIMEText(corpo)
+        msg = MIMEText(corpo, 'html')
         msg['Subject'] = assunto
         msg['From'] = os.getenv('EMAIL_FROM')
         msg['To'] = destinatario
@@ -111,7 +108,7 @@ def enviar_email(destinatario, assunto, corpo):
             server.send_message(msg)
         return True
     except Exception as e:
-        print(f"Erro ao enviar email: {e}")
+        print(f"Erro ao enviar email: {str(e)}")
         return False
 
 def verificar_alertas(usuario):
@@ -122,8 +119,12 @@ def verificar_alertas(usuario):
     ).scalar() or 0
 
     if usuario.limite_alerta and total_pago > usuario.limite_alerta:
-        assunto = "Alerta de Limite de Gastos"
-        corpo = f"Seus gastos ({total_pago}) excederam seu limite definido de {usuario.limite_alerta}!"
+        assunto = "⚠️ Alerta de Limite de Gastos"
+        corpo = f"""
+        <h3>Alerta de Limite de Gastos</h3>
+        <p>Seus gastos totais ({format_currency(total_pago)}) excederam seu limite definido de {format_currency(usuario.limite_alerta)}!</p>
+        <p>Data: {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+        """
         enviar_email(usuario.email, assunto, corpo)
         flash('Limite de gastos excedido! Verifique seu email para detalhes.', 'warning')
 
@@ -148,7 +149,8 @@ def gerar_grafico_categorias(usuario_id):
     plt.title('Distribuição de Gastos por Categoria')
     
     buffer = BytesIO()
-    plt.savefig(buffer, format='png')
+    plt.savefig(buffer, format='png', bbox_inches='tight')
+    plt.close()
     buffer.seek(0)
     return base64.b64encode(buffer.getvalue()).decode('utf-8')
 
@@ -181,9 +183,9 @@ def analisar_gastos(usuario_id):
         )
 
     if len(gastos_mensais) > 1:
-        ultimo_mes = gastos_mensais[-1][1]
-        penultimo_mes = gastos_mensais[-2][1]
-        if ultimo_mes > penultimo_mes:
+        ultimo_mes = gastos_mensais[-1][1] or 0
+        penultimo_mes = gastos_mensais[-2][1] or 0
+        if penultimo_mes > 0 and ultimo_mes > penultimo_mes:
             percentual = ((ultimo_mes - penultimo_mes) / penultimo_mes) * 100
             recomendacoes.append(
                 f"Seus gastos aumentaram {percentual:.2f}% no último mês. "
@@ -204,12 +206,26 @@ def registro():
         nome = request.form['nome']
         email = request.form['email']
         senha = request.form['senha']
+        confirmar_senha = request.form['confirmar_senha']
+        
+        if senha != confirmar_senha:
+            flash('As senhas não coincidem!', 'danger')
+            return redirect(url_for('registro'))
         
         if Usuario.query.filter_by(email=email).first():
             flash('Email já cadastrado!', 'danger')
             return redirect(url_for('registro'))
         
-        novo_usuario = Usuario(nome=nome, email=email, senha=senha)
+        # Validação básica de email
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            flash('Formato de email inválido!', 'danger')
+            return redirect(url_for('registro'))
+        
+        novo_usuario = Usuario(
+            nome=nome, 
+            email=email,
+            senha=generate_password_hash(senha)
+        )
         db.session.add(novo_usuario)
         db.session.commit()
         
@@ -220,12 +236,15 @@ def registro():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+        
     if request.method == 'POST':
         email = request.form['email']
         senha = request.form['senha']
         usuario = Usuario.query.filter_by(email=email).first()
         
-        if usuario and usuario.senha == senha:
+        if usuario and check_password_hash(usuario.senha, senha):
             login_user(usuario)
             return redirect(url_for('index'))
         else:
@@ -253,25 +272,30 @@ def index():
         Conta.usuario_id == current_user.id
     ).scalar() or 0
     
+    hoje = datetime.now().date()
     proximas_contas = Conta.query.filter(
         Conta.usuario_id == current_user.id,
         Conta.paga == False,
-        Conta.data_vencimento >= datetime.today().date()
+        Conta.data_vencimento >= hoje
     ).order_by(Conta.data_vencimento).limit(5).all()
     
     verificar_alertas(current_user)
     
     return render_template('index.html', 
-                         total_pago=total_pago,
-                         total_pendente=total_pendente,
-                         saldo=current_user.saldo,
-                         proximas_contas=proximas_contas)
+                         total_pago=format_currency(total_pago),
+                         total_pendente=format_currency(total_pendente),
+                         saldo=format_currency(current_user.saldo),
+                         proximas_contas=proximas_contas,
+                         format_currency=format_currency)
 
 @app.route('/contas')
 @login_required
 def listar_contas():
-    contas = Conta.query.filter_by(usuario_id=current_user.id).order_by(Conta.data_vencimento).all()
-    return render_template('listar_contas.html', contas=contas, format_currency=format_currency)
+    page = request.args.get('page', 1, type=int)
+    contas = Conta.query.filter_by(usuario_id=current_user.id)\
+                        .order_by(Conta.data_vencimento)\
+                        .paginate(page=page, per_page=10)
+    return render_template('listar_contas.html', contas=contas)
 
 @app.route('/adicionar', methods=['GET', 'POST'])
 @login_required
@@ -280,12 +304,11 @@ def adicionar_conta():
         descricao = request.form['descricao']
         valor = parse_brl_number(request.form['valor'])
         data_vencimento = datetime.strptime(request.form['data_vencimento'], '%Y-%m-%d').date()
-        categoria = request.form['categoria']
+        categoria = request.form['categoria'] or "Outros"
         paga = 'paga' in request.form
         
-        # Validação do valor
-        if valor is None:
-            flash('Formato de valor inválido! Use: 1.234,56', 'danger')
+        if valor is None or valor <= 0:
+            flash('Valor inválido! Deve ser maior que zero.', 'danger')
             return render_template('adicionar_conta.html')
         
         nova_conta = Conta(
@@ -298,13 +321,11 @@ def adicionar_conta():
         )
         
         db.session.add(nova_conta)
-        db.session.commit()
         
-        # Se a conta for marcada como paga, subtrai do saldo
         if paga:
             current_user.saldo -= valor
-            db.session.commit()
         
+        db.session.commit()
         verificar_alertas(current_user)
         flash('Conta adicionada com sucesso!', 'success')
         return redirect(url_for('listar_contas'))
@@ -322,37 +343,36 @@ def editar_conta(id):
     
     if request.method == 'POST':
         valor_anterior = conta.valor
+        status_anterior = conta.paga
         
         conta.descricao = request.form['descricao']
         
-        # Converter valor usando a função auxiliar
         valor = parse_brl_number(request.form['valor'])
-        if valor is None:
-            flash('Formato de valor inválido! Use: 1.234,56', 'danger')
+        if valor is None or valor <= 0:
+            flash('Valor inválido!', 'danger')
             return render_template('editar_conta.html', conta=conta)
         
         conta.valor = valor
         conta.data_vencimento = datetime.strptime(request.form['data_vencimento'], '%Y-%m-%d').date()
-        conta.categoria = request.form['categoria']
+        conta.categoria = request.form['categoria'] or "Outros"
         
-        # Verificar se o status de pagamento mudou
         nova_paga = 'paga' in request.form
-        if nova_paga != conta.paga:
-            if nova_paga:
-                # Se foi marcada como paga agora, subtrai do saldo
-                current_user.saldo -= valor
-            else:
-                # Se foi desmarcada, adiciona o valor de volta ao saldo
-                current_user.saldo += valor_anterior
-            
-            conta.paga = nova_paga
+        conta.paga = nova_paga
+        
+        # Ajuste do saldo
+        if status_anterior and not nova_paga:  # De paga para não paga
+            current_user.saldo += valor_anterior
+        elif not status_anterior and nova_paga:  # De não paga para paga
+            current_user.saldo -= valor
+        elif status_anterior and nova_paga and valor != valor_anterior:
+            current_user.saldo += (valor_anterior - valor)
         
         db.session.commit()
         verificar_alertas(current_user)
         flash('Conta atualizada com sucesso!', 'success')
         return redirect(url_for('listar_contas'))
     
-    return render_template('editar_conta.html', conta=conta, format_currency=format_currency)
+    return render_template('editar_conta.html', conta=conta)
 
 @app.route('/excluir/<int:id>')
 @login_required
@@ -363,10 +383,8 @@ def excluir_conta(id):
         flash('Acesso não autorizado!', 'danger')
         return redirect(url_for('listar_contas'))
     
-    # Se a conta estava paga, adiciona o valor de volta ao saldo
     if conta.paga:
         current_user.saldo += conta.valor
-        db.session.commit()
     
     db.session.delete(conta)
     db.session.commit()
@@ -384,7 +402,6 @@ def pagar_conta(id):
     
     if not conta.paga:
         conta.paga = True
-        # Subtrai o valor da conta do saldo
         current_user.saldo -= conta.valor
         db.session.commit()
         verificar_alertas(current_user)
@@ -398,8 +415,11 @@ def pagar_conta(id):
 @app.route('/listas_compras')
 @login_required
 def listar_listas_compras():
-    listas = ListaCompras.query.filter_by(usuario_id=current_user.id).order_by(ListaCompras.data_criacao.desc()).all()
-    return render_template('listar_listas_compras.html', listas=listas, format_currency=format_currency)
+    page = request.args.get('page', 1, type=int)
+    listas = ListaCompras.query.filter_by(usuario_id=current_user.id)\
+                              .order_by(ListaCompras.data_criacao.desc())\
+                              .paginate(page=page, per_page=5)
+    return render_template('listar_listas_compras.html', listas=listas)
 
 @app.route('/lista_compras/adicionar', methods=['GET', 'POST'])
 @login_required
@@ -407,32 +427,38 @@ def adicionar_lista_compras():
     if request.method == 'POST':
         titulo = request.form['titulo']
         
-        # Criar nova lista
         nova_lista = ListaCompras(
             titulo=titulo,
             usuario_id=current_user.id
         )
         db.session.add(nova_lista)
-        db.session.flush()  # Para obter o ID antes do commit
+        db.session.flush()
         
-        # Processar itens da lista
+        # Processar itens
         descricoes = request.form.getlist('item_descricao[]')
         valores = request.form.getlist('item_valor[]')
+        valores_numericos = []
         
-        for i in range(len(descricoes)):
-            if descricoes[i].strip():
+        for i, desc in enumerate(descricoes):
+            if desc.strip():
                 valor = parse_brl_number(valores[i])
-                if valor is None:
-                    flash(f'Formato inválido para o valor do item: {descricoes[i]}', 'danger')
+                if valor is None or valor <= 0:
+                    flash(f'Valor inválido para o item: {desc}', 'danger')
                     db.session.rollback()
                     return render_template('adicionar_lista_compras.html')
                 
+                valores_numericos.append(valor)
                 novo_item = ItemLista(
-                    descricao=descricoes[i],
+                    descricao=desc,
                     valor=valor,
                     lista_id=nova_lista.id
                 )
                 db.session.add(novo_item)
+        
+        if not nova_lista.itens:
+            flash('Adicione pelo menos um item válido!', 'danger')
+            db.session.rollback()
+            return render_template('adicionar_lista_compras.html')
         
         db.session.commit()
         flash('Lista de compras criada com sucesso!', 'success')
@@ -449,7 +475,7 @@ def ver_lista_compras(id):
         flash('Acesso não autorizado!', 'danger')
         return redirect(url_for('listar_listas_compras'))
     
-    return render_template('ver_lista_compras.html', lista=lista, format_currency=format_currency)
+    return render_template('ver_lista_compras.html', lista=lista)
 
 @app.route('/lista_compras/finalizar/<int:id>')
 @login_required
@@ -462,10 +488,9 @@ def finalizar_lista_compras(id):
     
     if not lista.finalizada:
         lista.finalizada = True
-        # Subtrai o total da lista do saldo
         current_user.saldo -= lista.total
         db.session.commit()
-        flash(f'Lista finalizada! R$ {lista.total:.2f} debitados do seu saldo.', 'success')
+        flash(f'Lista finalizada! {format_currency(lista.total)} debitados do seu saldo.', 'success')
     else:
         flash('Esta lista já foi finalizada', 'info')
     
@@ -480,10 +505,8 @@ def excluir_lista_compras(id):
         flash('Acesso não autorizado!', 'danger')
         return redirect(url_for('listar_listas_compras'))
     
-    # Se a lista foi finalizada, devolve o valor ao saldo
     if lista.finalizada:
         current_user.saldo += lista.total
-        db.session.commit()
     
     db.session.delete(lista)
     db.session.commit()
@@ -492,32 +515,21 @@ def excluir_lista_compras(id):
 
 @app.route('/perfil', methods=['GET', 'POST'])
 @login_required
-
-# Rota de perfil (APENAS UMA DEFINIÇÃO - corrigida com endpoint único)
-@app.route('/perfil', methods=['GET', 'POST'], endpoint='perfil_route')
-@login_required
 def perfil():
     if request.method == 'POST':
         current_user.nome = request.form['nome']
         current_user.email = request.form['email']
         
         try:
-            limite_str = request.form['limite_alerta'].replace('.', '').replace(',', '.')
-            current_user.limite_alerta = float(limite_str)
+            current_user.limite_alerta = parse_brl_number(request.form['limite_alerta']) or 1000.0
+            current_user.saldo = parse_brl_number(request.form['saldo']) or 0.0
         except ValueError:
-            flash('Formato inválido para limite de alerta! Use: 1.234,56', 'danger')
-            return redirect(url_for('perfil_route'))
-        
-        try:
-            saldo_str = request.form['saldo'].replace('.', '').replace(',', '.')
-            current_user.saldo = float(saldo_str)
-        except ValueError:
-            flash('Formato inválido para saldo! Use: 1.234,56', 'danger')
-            return redirect(url_for('perfil_route'))
+            flash('Formato de valor inválido! Use: 1.234,56', 'danger')
+            return redirect(url_for('perfil'))
         
         db.session.commit()
         flash('Perfil atualizado com sucesso!', 'success')
-        return redirect(url_for('perfil_route'))
+        return redirect(url_for('perfil'))
     
     return render_template('perfil.html')
 
@@ -525,15 +537,15 @@ def perfil():
 @login_required
 def analise():
     dados = analisar_gastos(current_user.id)
-    return render_template('analise.html', dados=dados)
+    return render_template('analise.html', dados=dados, format_currency=format_currency)
 
-# Context processor para injetar data/hora atual em todos os templates
+# Context processor para injetar funções em todos os templates
 @app.context_processor
-def inject_current_datetime():
+def inject_utils():
     return {
-        'now': datetime.now(),
-        'current_year': datetime.now().year,
-        'format_currency': format_currency
+        'now': datetime.now,
+        'format_currency': format_currency,
+        'timedelta': timedelta
     }
 
 # Inicialização do banco de dados
@@ -543,7 +555,6 @@ def inicializar_banco():
         print("Banco de dados inicializado!")
 
 # Chamar a função durante a inicialização
-inicializar_banco()
-
 if __name__ == '__main__':
+    inicializar_banco()
     app.run(debug=True)
