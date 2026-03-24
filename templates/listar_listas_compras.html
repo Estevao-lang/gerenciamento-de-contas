@@ -8,7 +8,7 @@
         <i class="bi bi-plus-circle"></i> Nova Lista
     </a>
     
-    {% if listas %}
+    {% if listas.items %}
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -21,7 +21,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for lista in listas %}
+                    {% for lista in listas.items %}
                     <tr>
                         <td>{{ lista.titulo }}</td>
                         <td>{{ lista.data_criacao.strftime('%d/%m/%Y') }}</td>
@@ -38,7 +38,8 @@
                                 <i class="bi bi-eye"></i> Ver
                             </a>
                             {% if not lista.finalizada %}
-                                <a href="{{ url_for('finalizar_lista_compras', id=lista.id) }}" class="btn btn-sm btn-success">
+                                <a href="{{ url_for('finalizar_lista_compras', id=lista.id) }}" class="btn btn-sm btn-success"
+                                    onclick="return confirm('Finalizar a lista debitará {{ format_currency(lista.total) }} do seu saldo. Confirmar?')">
                                     <i class="bi bi-check"></i> Finalizar
                                 </a>
                             {% endif %}
@@ -52,6 +53,29 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Paginação -->
+        {% if listas.pages > 1 %}
+        <nav class="mt-3">
+            <ul class="pagination justify-content-center">
+                <li class="page-item {% if not listas.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('listar_listas_compras', page=listas.prev_num) }}">Anterior</a>
+                </li>
+                {% for p in listas.iter_pages() %}
+                    {% if p %}
+                        <li class="page-item {% if p == listas.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('listar_listas_compras', page=p) }}">{{ p }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not listas.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('listar_listas_compras', page=listas.next_num) }}">Próximo</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
     {% else %}
         <div class="alert alert-info">
             Você ainda não criou nenhuma lista de compras.

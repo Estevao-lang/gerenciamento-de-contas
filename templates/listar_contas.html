@@ -17,10 +17,10 @@
                 </tr>
             </thead>
             <tbody>
-                {% for conta in contas %}
+                {% for conta in contas.items %}
                 <tr class="{% if conta.dias_vencimento < 3 and not conta.paga %}table-warning{% endif %}">
                     <td>{{ conta.descricao }}</td>
-                    <td>{{ "R$ {:,.2f}".format(conta.valor).replace(',', 'v').replace('.', ',').replace('v', '.') }}</td>
+                    <td>{{ format_currency(conta.valor) }}</td>
                     <td>{{ conta.data_vencimento.strftime('%d/%m/%Y') }}</td>
                     <td>
                         {% if conta.paga %}
@@ -59,7 +59,30 @@
             </tbody>
         </table>
     </div>
-    
+
+    <!-- Paginação -->
+    {% if contas.pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if not contas.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('listar_contas', page=contas.prev_num) }}">Anterior</a>
+            </li>
+            {% for p in contas.iter_pages() %}
+                {% if p %}
+                    <li class="page-item {% if p == contas.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('listar_contas', page=p) }}">{{ p }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not contas.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('listar_contas', page=contas.next_num) }}">Próximo</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+
     <div class="d-flex justify-content-between mt-4">
         <a href="{{ url_for('adicionar_conta') }}" class="btn btn-primary">
             <i class="bi bi-plus-circle"></i> Adicionar Nova Conta

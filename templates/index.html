@@ -10,17 +10,17 @@
     <!-- Novo cartão para o Saldo -->
     <div class="stats-card balance">
         <h5 class="card-title">Saldo Atual</h5>
-        <h2 class="card-text">R$ {{ current_user.saldo | round(2) }}</h2>
+        <h2 class="card-text">{{ saldo }}</h2>
     </div>
-    
+
     <div class="stats-card paid">
         <h5 class="card-title">Total Pago</h5>
-        <h2 class="card-text">R$ {{ total_pago | round(2) }}</h2>
+        <h2 class="card-text">{{ total_pago }}</h2>
     </div>
-    
+
     <div class="stats-card pending">
         <h5 class="card-title">Total Pendente</h5>
-        <h2 class="card-text">R$ {{ total_pendente | round(2) }}</h2>
+        <h2 class="card-text">{{ total_pendente }}</h2>
     </div>
 </div>
 
@@ -46,7 +46,7 @@
                     {% for conta in proximas_contas %}
                     <tr>
                         <td>{{ conta.descricao }}</td>
-                        <td>R$ {{ conta.valor | round(2) }}</td>
+                        <td>{{ format_currency(conta.valor) }}</td>
                         <td>{{ conta.data_vencimento.strftime('%d/%m/%Y') }}</td>
                         <td><span class="badge bg-secondary">{{ conta.categoria }}</span></td>
                         <td class="btn-group">

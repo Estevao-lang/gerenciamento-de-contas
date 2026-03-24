@@ -19,7 +19,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 load_dotenv()
 
 app = Flask(__name__, static_folder='static')
-app.secret_key = os.getenv('SECRET_KEY', 'fallback_secret_key')
+_secret = os.getenv('SECRET_KEY')
+if not _secret:
+    raise RuntimeError("SECRET_KEY não definida! Adicione SECRET_KEY no arquivo .env")
+app.secret_key = _secret
 
 # Configuração do PostgreSQL para Render.com
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
@@ -164,14 +167,15 @@ def analisar_gastos(usuario_id):
         Conta.paga == True
     ).group_by(Conta.categoria).order_by(func.sum(Conta.valor).desc()).all()
 
-    # Gastos mensais
+    # Gastos mensais — usa CAST para compatibilidade com PostgreSQL
     gastos_mensais = db.session.query(
         func.date_trunc('month', Conta.data_vencimento).label('mes'),
         func.sum(Conta.valor).label('total')
     ).filter(
         Conta.usuario_id == usuario_id,
         Conta.paga == True
-    ).group_by('mes').order_by('mes').all()
+    ).group_by(func.date_trunc('month', Conta.data_vencimento))\
+     .order_by(func.date_trunc('month', Conta.data_vencimento)).all()
 
     # Análise de recomendações
     recomendacoes = []
@@ -211,7 +215,11 @@ def registro():
         if senha != confirmar_senha:
             flash('As senhas não coincidem!', 'danger')
             return redirect(url_for('registro'))
-        
+
+        if len(senha) < 6:
+            flash('A senha deve ter pelo menos 6 caracteres!', 'danger')
+            return redirect(url_for('registro'))
+
         if Usuario.query.filter_by(email=email).first():
             flash('Email já cadastrado!', 'danger')
             return redirect(url_for('registro'))

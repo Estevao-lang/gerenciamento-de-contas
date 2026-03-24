@@ -19,7 +19,12 @@
                     </div>
                     <div class="mb-3">
                         <label for="senha" class="form-label">Senha</label>
-                        <input type="password" class="form-control" id="senha" name="senha" required>
+                        <input type="password" class="form-control" id="senha" name="senha" minlength="6" required>
+                        <small class="form-text text-muted">Mínimo de 6 caracteres</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmar_senha" class="form-label">Confirmar Senha</label>
+                        <input type="password" class="form-control" id="confirmar_senha" name="confirmar_senha" minlength="6" required>
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary">Registrar</button>

@@ -1,8 +1,12 @@
 // Script para manipulação de datas e melhorias de UX
 document.addEventListener('DOMContentLoaded', function() {
-    // Definir data mínima para o campo de data (hoje)
-    const hoje = new Date().toISOString().split('T')[0];
-    document.getElementById('data_vencimento').min = hoje;
+    // Definir data mínima para o campo de data (hoje) — guarda com null check
+    const campoData = document.getElementById('data_vencimento');
+    if (campoData) {
+        const hoje = new Date().toISOString().split('T')[0];
+        // Não restringe passado: contas vencidas são válidas
+        campoData.max = '';
+    }
     
     // Atualizar contadores em tempo real
     const valorInput = document.getElementById('valor');
