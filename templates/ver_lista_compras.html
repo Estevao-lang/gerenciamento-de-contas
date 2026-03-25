@@ -8,7 +8,6 @@
     </span>
 </div>
 
-<!-- Resumo -->
 <div class="stats-container" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">
     <div class="stats-card balance">
         <div class="card-title">Total da Lista</div>
@@ -24,7 +23,6 @@
     </div>
 </div>
 
-<!-- Itens -->
 <div class="card">
     <div class="card-header">
         <i class="bi bi-list-ul"></i> Itens da Lista
@@ -42,7 +40,14 @@
             <tbody>
                 {% for item in lista.itens %}
                 <tr>
-                    <td data-label="Produto"><strong>{{ item.descricao }}</strong></td>
+                    <td data-label="Produto">
+                        <strong>{{ item.descricao }}</strong>
+                        {% if item.foto_data_url %}
+                        <div class="mt-2">
+                            <img src="{{ item.foto_data_url }}" alt="{{ item.descricao }}" style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid var(--border)">
+                        </div>
+                        {% endif %}
+                    </td>
                     <td data-label="Qtd">
                         <span class="badge bg-secondary">{{ item.quantidade }}x</span>
                     </td>
@@ -69,7 +74,6 @@
     </div>
 </div>
 
-<!-- Ações -->
 <div class="btn-group btn-group-mobile-stack mt-2">
     <a href="{{ url_for('listar_listas_compras') }}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left"></i> Voltar

@@ -1,4 +1,4 @@
-const CACHE = 'mevecontas-v1';
+const CACHE = 'mevecontas-v2';
 
 const STATIC = [
   '/static/css/style.css',

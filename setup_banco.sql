@@ -79,10 +79,13 @@ CREATE INDEX IF NOT EXISTS idx_lista_compras_usuario ON lista_compras(usuario_id
 -- TABELA: item_lista
 -- ============================================================
 CREATE TABLE IF NOT EXISTS item_lista (
-    id          SERIAL          PRIMARY KEY,
-    lista_id    INTEGER         NOT NULL REFERENCES lista_compras(id) ON DELETE CASCADE,
-    descricao   VARCHAR(200)    NOT NULL,
-    valor       NUMERIC(12,2)   NOT NULL CHECK (valor >= 0)
+    id            SERIAL          PRIMARY KEY,
+    lista_id      INTEGER         NOT NULL REFERENCES lista_compras(id) ON DELETE CASCADE,
+    descricao     VARCHAR(200)    NOT NULL,
+    valor         NUMERIC(12,2)   NOT NULL CHECK (valor >= 0),
+    quantidade    INTEGER         NOT NULL DEFAULT 1 CHECK (quantidade > 0),
+    foto_base64   TEXT,
+    foto_mime     VARCHAR(50)
 );
 
 CREATE INDEX IF NOT EXISTS idx_item_lista_lista ON item_lista(lista_id);

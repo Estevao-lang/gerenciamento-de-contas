@@ -24,7 +24,10 @@
             <tbody>
                 {% for lista in listas.items %}
                 <tr>
-                    <td data-label="Título"><strong>{{ lista.titulo }}</strong></td>
+                    <td data-label="Título">
+                        <strong>{{ lista.titulo }}</strong>
+                        <br><small class="text-muted">{{ lista.itens|length }} itens · {{ lista.itens | sum(attribute='quantidade') }} un.</small>
+                    </td>
                     <td data-label="Total">{{ format_currency(lista.total) }}</td>
                     <td data-label="Data" class="d-mobile-none">{{ lista.data_criacao.strftime('%d/%m/%Y') }}</td>
                     <td data-label="Status">
@@ -72,7 +75,7 @@
                     <a class="page-link" href="{{ url_for('listar_listas_compras', page=p) }}">{{ p }}</a>
                 </li>
             {% else %}
-                <li class="page-item disabled"><span class="page-link">…</span></li>
+                <li class="page-item disabled"><span class="page-link">...</span></li>
             {% endif %}
         {% endfor %}
         <li class="page-item {% if not listas.has_next %}disabled{% endif %}">

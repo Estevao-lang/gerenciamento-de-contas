@@ -21,6 +21,7 @@
             </div>
             {% if usuario_pro(current_user) %}
             <form method="POST" action="{{ url_for('cancelar_assinatura') }}" onsubmit="return confirm('Cancelar assinatura Pro?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="btn btn-sm btn-outline-danger">Cancelar plano</button>
             </form>
             {% endif %}

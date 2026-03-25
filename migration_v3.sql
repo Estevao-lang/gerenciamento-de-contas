@@ -38,6 +38,9 @@ ALTER TABLE conta_fixa    ALTER COLUMN valor         TYPE NUMERIC(12,2) USING va
 ALTER TABLE usuario       ALTER COLUMN saldo         TYPE NUMERIC(12,2) USING saldo::NUMERIC(12,2);
 ALTER TABLE usuario       ALTER COLUMN limite_alerta TYPE NUMERIC(12,2) USING limite_alerta::NUMERIC(12,2);
 ALTER TABLE item_lista    ALTER COLUMN valor         TYPE NUMERIC(12,2) USING valor::NUMERIC(12,2);
+ALTER TABLE item_lista    ADD COLUMN IF NOT EXISTS quantidade INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE item_lista    ADD COLUMN IF NOT EXISTS foto_base64 TEXT;
+ALTER TABLE item_lista    ADD COLUMN IF NOT EXISTS foto_mime VARCHAR(50);
 
 -- 5. Preenche data_pagamento retroativamente para contas já pagas
 UPDATE conta SET data_pagamento = data_vencimento WHERE paga = TRUE AND data_pagamento IS NULL;
