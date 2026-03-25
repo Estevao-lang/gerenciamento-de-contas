@@ -8,6 +8,7 @@
 <div class="card" style="max-width:560px;margin:0 auto">
     <div class="card-body">
         <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
                 <label for="nome" class="form-label">Nome Completo</label>
                 <input type="text" class="form-control" id="nome" name="nome"
@@ -36,9 +37,12 @@
                 <button type="submit" class="btn btn-primary btn-lg">
                     <i class="bi bi-save"></i> Salvar Alterações
                 </button>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
-                    <i class="bi bi-box-arrow-right"></i> Sair da Conta
-                </a>
+                <form method="POST" action="{{ url_for('logout') }}" class="m-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-danger w-100">
+                        <i class="bi bi-box-arrow-right"></i> Sair da Conta
+                    </button>
+                </form>
             </div>
         </form>
     </div>

@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_wtf.csrf import CSRFProtect, CSRFError
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from datetime import datetime, timedelta, date
 from calendar import monthrange
 from sqlalchemy import func, text, Numeric
@@ -17,11 +20,35 @@ from werkzeug.security import generate_password_hash, check_password_hash
 load_dotenv()
 
 app = Flask(__name__, static_folder='static')
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-troque-em-prod')
 
-# Configuração do PostgreSQL
+# ── Chave secreta obrigatória ─────────────────────────────
+_secret = os.getenv('SECRET_KEY', '')
+if not _secret:
+    import secrets as _s
+    _secret = _s.token_hex(32)   # gera uma por processo (não persiste entre workers)
+    print('[AVISO] SECRET_KEY não definida — use uma chave fixa em produção!')
+app.secret_key = _secret
+
+# ── Cookies de sessão seguros ─────────────────────────────
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE']   = os.getenv('FLASK_DEBUG', 'false').lower() != 'true'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+
+# ── CSRF ─────────────────────────────────────────────────
+app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hora
+csrf = CSRFProtect(app)
+
+# ── Rate Limiter ──────────────────────────────────────────
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri='memory://',
+)
+
+# ── Configuração do PostgreSQL ────────────────────────────
 _db_url = os.getenv('DATABASE_URL', '')
-# Neon/Render usam "postgres://" — SQLAlchemy exige "postgresql://"
 if _db_url.startswith('postgres://'):
     _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
@@ -30,6 +57,22 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+# ── Headers de segurança em todas as respostas ────────────
+@app.after_request
+def security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options']        = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection']       = '1; mode=block'
+    response.headers['Referrer-Policy']        = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy']     = 'geolocation=(), microphone=(), camera=()'
+    return response
+
+# ── Erro CSRF ─────────────────────────────────────────────
+@app.errorhandler(CSRFError)
+def csrf_error(e):
+    flash('Sessão expirada ou requisição inválida. Tente novamente.', 'danger')
+    return redirect(request.referrer or url_for('index'))
 
 # Função auxiliar para converter números no formato brasileiro
 def parse_brl_number(value):
@@ -507,24 +550,29 @@ def registro():
     return render_template('registro.html')
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit('10 per minute', methods=['POST'], error_message='Muitas tentativas. Aguarde 1 minuto.')
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-        
+
     if request.method == 'POST':
-        email = request.form['email']
-        senha = request.form['senha']
+        email = request.form.get('email', '').strip().lower()
+        senha = request.form.get('senha', '')
         usuario = Usuario.query.filter_by(email=email).first()
-        
+
         if usuario and check_password_hash(usuario.senha, senha):
-            login_user(usuario)
+            login_user(usuario, remember=False)
+            next_page = request.args.get('next')
+            # evita open redirect — só permite URLs relativas
+            if next_page and next_page.startswith('/') and not next_page.startswith('//'):
+                return redirect(next_page)
             return redirect(url_for('index'))
         else:
-            flash('Login falhou. Verifique email e senha!', 'danger')
-    
+            flash('E-mail ou senha incorretos.', 'danger')
+
     return render_template('login.html')
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 @login_required
 def logout():
     logout_user()
@@ -590,6 +638,7 @@ def cancelar_assinatura():
     return redirect(url_for('perfil'))
 
 @app.route('/webhook/stripe', methods=['POST'])
+@csrf.exempt
 def webhook_stripe():
     try:
         import stripe
@@ -744,7 +793,7 @@ def editar_conta(id):
     
     return render_template('editar_conta.html', conta=conta)
 
-@app.route('/excluir/<int:id>')
+@app.route('/excluir/<int:id>', methods=['POST'])
 @login_required
 def excluir_conta(id):
     conta = Conta.query.get_or_404(id)
@@ -761,7 +810,7 @@ def excluir_conta(id):
     flash('Conta excluída com sucesso!', 'success')
     return redirect(url_for('listar_contas'))
 
-@app.route('/pagar/<int:id>')
+@app.route('/pagar/<int:id>', methods=['POST'])
 @login_required
 def pagar_conta(id):
     conta = Conta.query.get_or_404(id)
@@ -906,7 +955,7 @@ def editar_conta_fixa(id):
     return render_template('adicionar_conta_fixa.html', cf=cf, categorias=CATEGORIAS, recorrencias=RECORRENCIAS)
 
 
-@app.route('/contas_fixas/toggle/<int:id>')
+@app.route('/contas_fixas/toggle/<int:id>', methods=['POST'])
 @login_required
 def toggle_conta_fixa(id):
     cf = ContaFixa.query.get_or_404(id)
@@ -922,7 +971,7 @@ def toggle_conta_fixa(id):
     return redirect(url_for('listar_contas_fixas'))
 
 
-@app.route('/contas_fixas/excluir/<int:id>')
+@app.route('/contas_fixas/excluir/<int:id>', methods=['POST'])
 @login_required
 def excluir_conta_fixa(id):
     cf = ContaFixa.query.get_or_404(id)
@@ -1006,7 +1055,7 @@ def ver_lista_compras(id):
     
     return render_template('ver_lista_compras.html', lista=lista)
 
-@app.route('/lista_compras/finalizar/<int:id>')
+@app.route('/lista_compras/finalizar/<int:id>', methods=['POST'])
 @login_required
 def finalizar_lista_compras(id):
     lista = ListaCompras.query.get_or_404(id)
@@ -1025,7 +1074,7 @@ def finalizar_lista_compras(id):
     
     return redirect(url_for('ver_lista_compras', id=id))
 
-@app.route('/lista_compras/excluir/<int:id>')
+@app.route('/lista_compras/excluir/<int:id>', methods=['POST'])
 @login_required
 def excluir_lista_compras(id):
     lista = ListaCompras.query.get_or_404(id)
@@ -1046,20 +1095,48 @@ def excluir_lista_compras(id):
 @login_required
 def perfil():
     if request.method == 'POST':
-        current_user.nome = request.form['nome']
-        current_user.email = request.form['email']
-        
+        acao = request.form.get('acao', 'dados')
+
+        if acao == 'senha':
+            senha_atual = request.form.get('senha_atual', '')
+            nova_senha  = request.form.get('nova_senha', '')
+            confirmar   = request.form.get('confirmar_nova', '')
+            if not check_password_hash(current_user.senha, senha_atual):
+                flash('Senha atual incorreta.', 'danger')
+            elif len(nova_senha) < 6:
+                flash('A nova senha deve ter pelo menos 6 caracteres.', 'danger')
+            elif nova_senha != confirmar:
+                flash('As senhas não coincidem.', 'danger')
+            else:
+                current_user.senha = generate_password_hash(nova_senha)
+                db.session.commit()
+                flash('Senha alterada com sucesso!', 'success')
+            return redirect(url_for('perfil'))
+
+        # Atualiza dados gerais
+        novo_email = request.form.get('email', '').strip().lower()
+        if novo_email != current_user.email:
+            if not re.match(r"[^@]+@[^@]+\.[^@]+", novo_email):
+                flash('E-mail inválido.', 'danger')
+                return redirect(url_for('perfil'))
+            if Usuario.query.filter(Usuario.email == novo_email, Usuario.id != current_user.id).first():
+                flash('Este e-mail já está em uso.', 'danger')
+                return redirect(url_for('perfil'))
+            current_user.email = novo_email
+
+        current_user.nome = request.form.get('nome', current_user.nome)[:100]
+
         try:
             current_user.limite_alerta = parse_brl_number(request.form['limite_alerta']) or 1000.0
-            current_user.saldo = parse_brl_number(request.form['saldo']) or 0.0
+            current_user.saldo         = parse_brl_number(request.form['saldo']) or 0.0
         except ValueError:
             flash('Formato de valor inválido! Use: 1.234,56', 'danger')
             return redirect(url_for('perfil'))
-        
+
         db.session.commit()
         flash('Perfil atualizado com sucesso!', 'success')
         return redirect(url_for('perfil'))
-    
+
     return render_template('perfil.html')
 
 @app.route('/analise')

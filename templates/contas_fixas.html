@@ -73,13 +73,17 @@
                         <a href="{{ url_for('editar_conta_fixa', id=cf.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
                             <i class="bi bi-pencil"></i>
                         </a>
-                        <a href="{{ url_for('toggle_conta_fixa', id=cf.id) }}" class="btn btn-sm btn-outline-warning" title="{{ 'Pausar' if cf.ativa else 'Ativar' }}">
-                            <i class="bi bi-{{ 'pause' if cf.ativa else 'play' }}-fill"></i>
-                        </a>
-                        <a href="{{ url_for('excluir_conta_fixa', id=cf.id) }}" class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('Remover esta conta fixa? As parcelas já geradas serão mantidas.')">
-                            <i class="bi bi-trash"></i>
-                        </a>
+                        <form method="POST" action="{{ url_for('toggle_conta_fixa', id=cf.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-warning" title="{{ 'Pausar' if cf.ativa else 'Ativar' }}">
+                                <i class="bi bi-{{ 'pause' if cf.ativa else 'play' }}-fill"></i>
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('excluir_conta_fixa', id=cf.id) }}" class="d-inline"
+                              onsubmit="return confirm('Remover esta conta fixa? As parcelas já geradas serão mantidas.')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
                     </td>
                 </tr>
                 {% else %}

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Gerencie suas finanças de forma simples e inteligente">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- PWA -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -94,7 +95,12 @@
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="{{ url_for('perfil') }}"><i class="bi bi-person me-2"></i>Perfil</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></li>
+                            <li>
+                                <form method="POST" action="{{ url_for('logout') }}" class="m-0">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Sair</button>
+                                </form>
+                            </li>
                         </ul>
                     </li>
                     {% else %}

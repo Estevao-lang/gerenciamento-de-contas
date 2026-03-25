@@ -55,14 +55,20 @@
         <i class="bi bi-arrow-left"></i> Voltar
     </a>
     {% if not lista.finalizada %}
-    <a href="{{ url_for('finalizar_lista_compras', id=lista.id) }}" class="btn btn-success"
-       onclick="return confirm('Finalizar e debitar {{ format_currency(lista.total) }} do saldo?')">
-        <i class="bi bi-check-circle"></i> Finalizar Compra
-    </a>
+    <form method="POST" action="{{ url_for('finalizar_lista_compras', id=lista.id) }}" class="d-inline"
+          onsubmit="return confirm('Finalizar e debitar {{ format_currency(lista.total) }} do saldo?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-success">
+            <i class="bi bi-check-circle"></i> Finalizar Compra
+        </button>
+    </form>
     {% endif %}
-    <a href="{{ url_for('excluir_lista_compras', id=lista.id) }}" class="btn btn-outline-danger"
-       onclick="return confirm('Excluir esta lista?')">
-        <i class="bi bi-trash"></i> Excluir
-    </a>
+    <form method="POST" action="{{ url_for('excluir_lista_compras', id=lista.id) }}" class="d-inline"
+          onsubmit="return confirm('Excluir esta lista?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-danger">
+            <i class="bi bi-trash"></i> Excluir
+        </button>
+    </form>
 </div>
 {% endblock %}

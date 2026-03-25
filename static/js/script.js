@@ -84,9 +84,13 @@ async function finbotEnviar() {
     const loadingDiv = finbotAdicionarMsg('...', 'bot loading');
 
     try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
         const res = await fetch('/api/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
             body: JSON.stringify({ messages: finbotHistory })
         });
         const data = await res.json();

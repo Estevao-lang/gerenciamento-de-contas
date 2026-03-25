@@ -39,15 +39,17 @@
                             <i class="bi bi-eye"></i>
                         </a>
                         {% if not lista.finalizada %}
-                        <a href="{{ url_for('finalizar_lista_compras', id=lista.id) }}" class="btn btn-sm btn-success"
-                           onclick="return confirm('Finalizar e debitar {{ format_currency(lista.total) }}?')">
-                            <i class="bi bi-check"></i>
-                        </a>
+                        <form method="POST" action="{{ url_for('finalizar_lista_compras', id=lista.id) }}" class="d-inline"
+                              onsubmit="return confirm('Finalizar e debitar {{ format_currency(lista.total) }}?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check"></i></button>
+                        </form>
                         {% endif %}
-                        <a href="{{ url_for('excluir_lista_compras', id=lista.id) }}" class="btn btn-sm btn-outline-danger"
-                           onclick="return confirm('Excluir esta lista?')">
-                            <i class="bi bi-trash"></i>
-                        </a>
+                        <form method="POST" action="{{ url_for('excluir_lista_compras', id=lista.id) }}" class="d-inline"
+                              onsubmit="return confirm('Excluir esta lista?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}

@@ -12,7 +12,6 @@
 <div class="card" id="card-ia" style="border:2px solid var(--primary)">
     <div class="card-header" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark))">
         <i class="bi bi-stars"></i> Análise Inteligente com IA
-        <span class="ms-auto" style="font-size:.78rem;font-weight:400;opacity:.8">Powered by Claude</span>
     </div>
     <div class="card-body">
         <div id="ia-placeholder" class="text-center py-3">
@@ -147,9 +146,10 @@ async function gerarAnaliseIA() {
     document.getElementById('ia-loading').style.display    = 'block';
 
     try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
         const res = await fetch('/api/analise-ia', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
             body: JSON.stringify({})
         });
         const data = await res.json();
