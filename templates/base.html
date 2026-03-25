@@ -10,13 +10,13 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="FinanceFlow">
-    <meta name="application-name" content="FinanceFlow">
+    <meta name="apple-mobile-web-app-title" content="MeVê Contas">
+    <meta name="application-name" content="MeVê Contas">
     <meta name="theme-color" content="#4f46e5">
     <meta name="msapplication-TileColor" content="#4f46e5">
     <meta name="msapplication-TileImage" content="{{ url_for('static', filename='icons/icon-144x144.png') }}">
 
-    <title>FinanceFlow</title>
+    <title>MeVê Contas</title>
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon"   href="{{ url_for('static', filename='favicon.ico') }}">
@@ -44,7 +44,7 @@
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="bi bi-wallet2"></i>
-                <span>FinanceFlow</span>
+                <span>MeVê Contas</span>
             </a>
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -170,26 +170,26 @@
     <!-- ===== FOOTER (desktop) ===== -->
     <footer>
         <div class="container">
-            <p class="mb-0">FinanceFlow &copy; {{ now().year }} — Gerenciamento Financeiro</p>
+            <p class="mb-0">MeVê Contas &copy; {{ now().year }} — Gerenciamento Financeiro</p>
         </div>
     </footer>
 
     <!-- ===== FINBOT — CHAT IA ===== -->
     {% if current_user.is_authenticated %}
-    <div id="finbot-bubble" class="finbot-bubble" onclick="finbotToggle()" title="FinBot — Assistente IA">
+    <div id="finbot-bubble" class="finbot-bubble" onclick="finbotToggle()" title="MeVê Bot — Assistente IA">
         <i class="bi bi-robot" id="finbot-icon-open"></i>
         <i class="bi bi-x-lg" id="finbot-icon-close" style="display:none"></i>
     </div>
 
     <div id="finbot-window" class="finbot-window" style="display:none">
         <div class="finbot-header">
-            <i class="bi bi-stars"></i> FinBot
+            <i class="bi bi-stars"></i> MeVê Bot
             <span class="ms-1" style="font-size:.72rem;opacity:.75;font-weight:400">Assistente IA</span>
             <button class="finbot-close" onclick="finbotToggle()"><i class="bi bi-x-lg"></i></button>
         </div>
         <div id="finbot-messages" class="finbot-messages">
             <div class="finbot-msg bot">
-                <span>Olá! Sou o FinBot 👋<br>Posso analisar seus gastos, alertar vencimentos e dar dicas de economia. Como posso ajudar?</span>
+                <span>Olá! Sou o MeVê Bot 👋<br>Posso analisar seus gastos, alertar vencimentos e dar dicas de economia. Como posso ajudar?</span>
             </div>
         </div>
         <div class="finbot-input-row">

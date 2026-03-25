@@ -1,4 +1,4 @@
-const CACHE = 'financeflow-v4';
+const CACHE = 'mevecontas-v1';
 
 const STATIC = [
   '/static/css/style.css',

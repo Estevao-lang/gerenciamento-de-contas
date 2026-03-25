@@ -370,7 +370,7 @@ def contexto_financeiro(usuario_id):
 # API: Chatbot IA
 # ────────────────────────────────────────────────────────────
 
-SYSTEM_CHAT = """Você é o FinBot, assistente financeiro pessoal integrado ao FinanceFlow.
+SYSTEM_CHAT = """Você é o MeVê Bot, assistente financeiro pessoal do MeVê Contas — app da empresa Me Vê Um Site.
 Você tem acesso aos dados financeiros reais do usuário e responde SEMPRE em português brasileiro.
 Seja direto, prático e levemente amigável. Use bullet points quando listar coisas.
 Você pode ajudar com: análise de gastos, dicas de economia, planejamento, alertas de vencimento e perguntas gerais sobre finanças pessoais.
@@ -622,7 +622,7 @@ def assinar_pro():
 @app.route('/sucesso-assinatura')
 @login_required
 def sucesso_assinatura():
-    flash('Assinatura Pro ativada com sucesso! Bem-vindo ao FinanceFlow Pro.', 'success')
+    flash('Assinatura Pro ativada com sucesso! Bem-vindo ao MeVê Contas Pro.', 'success')
     return render_template('sucesso_assinatura.html')
 
 @app.route('/cancelar-assinatura', methods=['POST'])

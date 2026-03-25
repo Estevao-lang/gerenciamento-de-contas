@@ -1,6 +1,6 @@
 {
-  "name": "FinanceFlow",
-  "short_name": "FinanceFlow",
+  "name": "MeVê Contas",
+  "short_name": "MeVê",
   "description": "Gerencie suas finanças de forma simples e inteligente",
   "start_url": "/",
   "display": "standalone",
