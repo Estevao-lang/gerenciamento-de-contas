@@ -10,3 +10,4 @@ numpy==2.2.6
 Pillow==11.2.1
 gunicorn==23.0.0
 groq==0.13.1
+stripe==11.4.1

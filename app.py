@@ -49,15 +49,53 @@ def format_currency(value):
 
 MON = db.Numeric(12, 2)   # tipo para valores monetários
 
+# ── Planos e limites ──────────────────────────────────────
+PLANOS = {
+    'gratuito': {'contas_mes': 15, 'contas_fixas': 3,    'listas': 2},
+    'pro':      {'contas_mes': None, 'contas_fixas': None, 'listas': None},
+}
+
+def usuario_pro(u):
+    if getattr(u, 'plano', 'gratuito') != 'pro':
+        return False
+    expira = getattr(u, 'plano_expira_em', None)
+    if expira and expira < datetime.today().date():
+        return False
+    return True
+
+def check_limite(usuario, recurso):
+    """Retorna True se dentro do limite, False se atingiu o teto do plano gratuito."""
+    if usuario_pro(usuario):
+        return True
+    lim = PLANOS['gratuito']
+    hoje = datetime.today().date()
+    if recurso == 'conta':
+        inicio_mes = hoje.replace(day=1)
+        count = Conta.query.filter(
+            Conta.usuario_id == usuario.id,
+            Conta.criado_em >= inicio_mes
+        ).count()
+        return count < lim['contas_mes']
+    if recurso == 'conta_fixa':
+        return ContaFixa.query.filter_by(usuario_id=usuario.id).count() < lim['contas_fixas']
+    if recurso == 'lista':
+        return ListaCompras.query.filter_by(usuario_id=usuario.id).count() < lim['listas']
+    return True
+
 # Modelo de Usuário
 class Usuario(db.Model, UserMixin):
-    id            = db.Column(db.Integer, primary_key=True)
-    nome          = db.Column(db.String(100), nullable=False)
-    email         = db.Column(db.String(100), unique=True, nullable=False)
-    senha         = db.Column(db.String(255), nullable=False)
-    limite_alerta = db.Column(MON, default=1000.0)
-    saldo         = db.Column(MON, default=0.0)
-    criado_em     = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)
+    id                     = db.Column(db.Integer, primary_key=True)
+    nome                   = db.Column(db.String(100), nullable=False)
+    email                  = db.Column(db.String(100), unique=True, nullable=False)
+    senha                  = db.Column(db.String(255), nullable=False)
+    limite_alerta          = db.Column(MON, default=1000.0)
+    saldo                  = db.Column(MON, default=0.0)
+    criado_em              = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)
+    # Plano de assinatura
+    plano                  = db.Column(db.String(20), default='gratuito')   # gratuito | pro
+    plano_expira_em        = db.Column(db.Date, nullable=True)
+    stripe_customer_id     = db.Column(db.String(100), nullable=True)
+    stripe_subscription_id = db.Column(db.String(100), nullable=True)
     contas        = db.relationship('Conta', backref='usuario', lazy=True, cascade="all, delete-orphan")
     listas_compras= db.relationship('ListaCompras', backref='usuario', lazy=True, cascade="all, delete-orphan")
     contas_fixas  = db.relationship('ContaFixa', backref='usuario', lazy=True, cascade="all, delete-orphan")
@@ -507,10 +545,101 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+# ── Landing page ─────────────────────────────────────────
+@app.route('/landing')
+def landing():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('landing.html')
+
+@app.route('/planos')
+def planos():
+    return render_template('planos.html')
+
+# ── Stripe ───────────────────────────────────────────────
+@app.route('/assinar/pro', methods=['POST'])
+@login_required
+def assinar_pro():
+    try:
+        import stripe
+        stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+        price_id = os.getenv('STRIPE_PRICE_ID')
+        if not stripe.api_key or not price_id:
+            flash('Pagamento não configurado ainda. Entre em contato.', 'warning')
+            return redirect(url_for('planos'))
+        checkout = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{'price': price_id, 'quantity': 1}],
+            mode='subscription',
+            success_url=url_for('sucesso_assinatura', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=url_for('planos', _external=True),
+            customer_email=current_user.email,
+            metadata={'usuario_id': str(current_user.id)},
+        )
+        return redirect(checkout.url, code=303)
+    except Exception as e:
+        flash(f'Erro ao iniciar pagamento: {str(e)}', 'danger')
+        return redirect(url_for('planos'))
+
+@app.route('/sucesso-assinatura')
+@login_required
+def sucesso_assinatura():
+    flash('Assinatura Pro ativada com sucesso! Bem-vindo ao FinanceFlow Pro.', 'success')
+    return render_template('sucesso_assinatura.html')
+
+@app.route('/cancelar-assinatura', methods=['POST'])
+@login_required
+def cancelar_assinatura():
+    try:
+        import stripe
+        stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+        sub_id = current_user.stripe_subscription_id
+        if sub_id:
+            stripe.Subscription.modify(sub_id, cancel_at_period_end=True)
+        current_user.plano = 'gratuito'
+        current_user.plano_expira_em = None
+        db.session.commit()
+        flash('Assinatura cancelada. Você volta ao plano gratuito.', 'info')
+    except Exception as e:
+        flash(f'Erro ao cancelar: {str(e)}', 'danger')
+    return redirect(url_for('perfil'))
+
+@app.route('/webhook/stripe', methods=['POST'])
+def webhook_stripe():
+    try:
+        import stripe
+        stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+        secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+        payload = request.get_data()
+        sig = request.headers.get('Stripe-Signature', '')
+        event = stripe.Webhook.construct_event(payload, sig, secret)
+    except Exception:
+        return '', 400
+
+    data = event['data']['object']
+    if event['type'] == 'checkout.session.completed':
+        uid = int(data.get('metadata', {}).get('usuario_id', 0))
+        u = Usuario.query.get(uid)
+        if u:
+            u.plano = 'pro'
+            u.plano_expira_em = datetime.today().date() + timedelta(days=365)
+            u.stripe_customer_id = data.get('customer')
+            u.stripe_subscription_id = data.get('subscription')
+            db.session.commit()
+    elif event['type'] in ('customer.subscription.deleted',):
+        sub = Usuario.query.filter_by(stripe_subscription_id=data.get('id')).first()
+        if sub:
+            sub.plano = 'gratuito'
+            sub.plano_expira_em = None
+            db.session.commit()
+    return '', 200
+
 # Rotas da Aplicação
 @app.route('/')
-@login_required
 def index():
+    if not current_user.is_authenticated:
+        return render_template('landing.html')
+
     total_pago = db.session.query(func.sum(Conta.valor)).filter(
         Conta.paga == True,
         Conta.usuario_id == current_user.id
@@ -553,6 +682,9 @@ def listar_contas():
 @app.route('/adicionar', methods=['GET', 'POST'])
 @login_required
 def adicionar_conta():
+    if not check_limite(current_user, 'conta'):
+        flash('Limite de 15 contas por mês atingido. Faça upgrade para o plano Pro.', 'warning')
+        return redirect(url_for('planos'))
     if request.method == 'POST':
         descricao = request.form['descricao']
         valor = parse_brl_number(request.form['valor'])
@@ -701,6 +833,9 @@ def listar_contas_fixas():
 @app.route('/contas_fixas/adicionar', methods=['GET', 'POST'])
 @login_required
 def adicionar_conta_fixa():
+    if not check_limite(current_user, 'conta_fixa'):
+        flash('Limite de 3 contas fixas atingido no plano gratuito. Faça upgrade para o Pro.', 'warning')
+        return redirect(url_for('planos'))
     if request.method == 'POST':
         descricao = request.form['descricao'].strip()
         valor = parse_brl_number(request.form['valor'])
@@ -830,6 +965,9 @@ def listar_listas_compras():
 @app.route('/lista_compras/adicionar', methods=['GET', 'POST'])
 @login_required
 def adicionar_lista_compras():
+    if not check_limite(current_user, 'lista'):
+        flash('Limite de 2 listas de compras atingido no plano gratuito. Faça upgrade para o Pro.', 'warning')
+        return redirect(url_for('planos'))
     if request.method == 'POST':
         titulo = request.form['titulo']
         
@@ -951,7 +1089,8 @@ def inject_utils():
     return {
         'now': datetime.now,
         'format_currency': format_currency,
-        'timedelta': timedelta
+        'timedelta': timedelta,
+        'usuario_pro': usuario_pro,
     }
 
 # Inicialização do banco de dados

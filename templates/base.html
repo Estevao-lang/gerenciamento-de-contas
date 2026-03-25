@@ -78,6 +78,15 @@
                             <i class="bi bi-graph-up-arrow"></i> Análise
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('planos') }}">
+                            {% if usuario_pro(current_user) %}
+                            <i class="bi bi-gem" style="color:#fbbf24"></i> Pro
+                            {% else %}
+                            <i class="bi bi-gem"></i> Planos
+                            {% endif %}
+                        </a>
+                    </li>
                     <li class="nav-item dropdown ms-lg-2">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-person-circle"></i> {{ current_user.nome.split()[0] }}

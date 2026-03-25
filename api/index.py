@@ -26,6 +26,11 @@ with app.app_context():
         "CREATE INDEX IF NOT EXISTS idx_conta_fixa_usuario ON conta_fixa(usuario_id)",
         "CREATE INDEX IF NOT EXISTS idx_conta_paga         ON conta(usuario_id, paga)",
         "CREATE INDEX IF NOT EXISTS idx_conta_fixa_ref     ON conta(conta_fixa_id)",
+        # planos
+        "ALTER TABLE usuario ADD COLUMN IF NOT EXISTS plano VARCHAR(20) NOT NULL DEFAULT 'gratuito'",
+        "ALTER TABLE usuario ADD COLUMN IF NOT EXISTS plano_expira_em DATE",
+        "ALTER TABLE usuario ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(100)",
+        "ALTER TABLE usuario ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(100)",
     ]
     try:
         with db.engine.connect() as conn:

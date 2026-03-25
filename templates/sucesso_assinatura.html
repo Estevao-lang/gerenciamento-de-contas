@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="text-align:center;padding:3rem 1rem">
+    <div style="font-size:4rem;margin-bottom:1rem">🎉</div>
+    <h2 style="font-weight:900;margin-bottom:.75rem">Bem-vindo ao Pro!</h2>
+    <p style="color:var(--text-muted);margin-bottom:2rem">Sua assinatura foi ativada. Agora você tem acesso ilimitado a todas as funcionalidades.</p>
+    <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+        <i class="bi bi-speedometer2"></i> Ir para o Dashboard
+    </a>
+</div>
+{% endblock %}

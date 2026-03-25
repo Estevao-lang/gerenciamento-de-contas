@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-gem"></i> Planos</h2>
+</div>
+
+{% if current_user.is_authenticated %}
+<!-- Banner do plano atual -->
+<div class="card mb-3" style="background:{% if usuario_pro(current_user) %}linear-gradient(135deg,#eef2ff,#ede9fe){% else %}var(--bg-card){% endif %};border:2px solid {% if usuario_pro(current_user) %}var(--primary){% else %}var(--border){% endif %}">
+    <div class="card-body" style="padding:1.1rem 1.25rem">
+        <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+            <span style="font-size:1.5rem">{% if usuario_pro(current_user) %}👑{% else %}🆓{% endif %}</span>
+            <div style="flex:1">
+                <strong>Plano atual: {{ 'Pro' if usuario_pro(current_user) else 'Gratuito' }}</strong>
+                {% if usuario_pro(current_user) and current_user.plano_expira_em %}
+                <br><small class="text-muted">Renovação em {{ current_user.plano_expira_em.strftime('%d/%m/%Y') }}</small>
+                {% elif not usuario_pro(current_user) %}
+                <br><small class="text-muted">15 contas/mês · 3 fixas · 2 listas</small>
+                {% endif %}
+            </div>
+            {% if usuario_pro(current_user) %}
+            <form method="POST" action="{{ url_for('cancelar_assinatura') }}" onsubmit="return confirm('Cancelar assinatura Pro?')">
+                <button class="btn btn-sm btn-outline-danger">Cancelar plano</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem;max-width:700px;margin:0 auto">
+
+    <!-- GRATUITO -->
+    <div class="card" style="border:2px solid var(--border)">
+        <div class="card-body" style="padding:1.75rem">
+            <p style="font-size:.82rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem">Gratuito</p>
+            <p style="font-size:2.6rem;font-weight:900;letter-spacing:-.04em;margin-bottom:.25rem">R$ 0<span style="font-size:1rem;font-weight:500;color:var(--text-muted)">/mês</span></p>
+            <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:1.5rem">Para quem está começando.</p>
+            <ul style="list-style:none;padding:0;margin-bottom:1.75rem">
+                {% for item in [
+                    ('check-circle-fill text-success', 'Até 15 contas por mês'),
+                    ('check-circle-fill text-success', 'Até 3 contas fixas'),
+                    ('check-circle-fill text-success', '2 listas de compras'),
+                    ('check-circle-fill text-success', 'FinBot IA incluído'),
+                    ('check-circle-fill text-success', 'App PWA instalável'),
+                ] %}
+                <li style="display:flex;align-items:center;gap:.5rem;padding:.35rem 0;font-size:.9rem">
+                    <i class="bi bi-{{ item[0] }}"></i> {{ item[1] }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('registro') }}" class="btn btn-outline-secondary d-block">Criar conta grátis</a>
+            {% elif not usuario_pro(current_user) %}
+            <div class="btn btn-outline-secondary d-block text-center" style="pointer-events:none;opacity:.6">Plano atual</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- PRO -->
+    <div class="card" style="border:2px solid var(--primary);box-shadow:0 0 0 4px rgba(79,70,229,.1);position:relative">
+        <div style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;font-size:.72rem;font-weight:800;padding:.25rem .9rem;border-radius:99px;white-space:nowrap">
+            Mais popular
+        </div>
+        <div class="card-header" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark))">
+            <i class="bi bi-gem"></i> Pro
+        </div>
+        <div class="card-body" style="padding:1.75rem">
+            <p style="font-size:2.6rem;font-weight:900;letter-spacing:-.04em;margin-bottom:.25rem">R$ 19<span style="font-size:1rem;font-weight:500;color:var(--text-muted)">,90/mês</span></p>
+            <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:1.5rem">Controle total, sem limites.</p>
+            <ul style="list-style:none;padding:0;margin-bottom:1.75rem">
+                {% for item in [
+                    ('Contas ilimitadas', True),
+                    ('Contas fixas ilimitadas', True),
+                    ('Listas de compras ilimitadas', True),
+                    ('FinBot IA ilimitado', True),
+                    ('Análise IA avançada', True),
+                    ('Suporte prioritário', True),
+                ] %}
+                <li style="display:flex;align-items:center;gap:.5rem;padding:.35rem 0;font-size:.9rem;font-weight:{% if item[1] %}600{% else %}400{% endif %}">
+                    <i class="bi bi-check-circle-fill text-success"></i> {{ item[0] }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('registro') }}" class="btn btn-primary d-block">Começar Pro</a>
+            {% elif usuario_pro(current_user) %}
+            <div class="btn btn-primary d-block text-center" style="pointer-events:none;opacity:.7">Plano ativo ✓</div>
+            {% else %}
+            <form method="POST" action="{{ url_for('assinar_pro') }}">
+                <button type="submit" class="btn btn-primary d-block w-100">
+                    <i class="bi bi-credit-card"></i> Assinar por R$ 19,90/mês
+                </button>
+            </form>
+            <p style="text-align:center;font-size:.78rem;color:var(--text-muted);margin-top:.75rem">
+                <i class="bi bi-shield-check"></i> Pagamento seguro · Cancele quando quiser
+            </p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<div class="card mt-4" style="background:var(--bg);border:1px solid var(--border)">
+    <div class="card-body" style="padding:1rem">
+        <p style="font-size:.85rem;color:var(--text-muted);margin:0;text-align:center">
+            <i class="bi bi-question-circle"></i>
+            Dúvidas? Fale conosco — <strong>suporte@financeflow.app</strong>
+        </p>
+    </div>
+</div>
+{% endblock %}
