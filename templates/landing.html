@@ -196,7 +196,22 @@
 <!-- NAVBAR -->
 <nav class="lp-nav">
     <a href="{{ url_for('landing') }}" class="lp-logo">
-        <i class="bi bi-wallet2"></i> MeVê Contas
+        <svg width="32" height="32" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;border-radius:8px">
+          <defs>
+            <linearGradient id="lbg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#4f46e5"/>
+              <stop offset="100%" stop-color="#1e1b4b"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="110" fill="url(#lbg)"/>
+          <path d="M50 256 Q256 88 462 256 Q256 424 50 256Z" fill="white" fill-opacity="0.07" stroke="white" stroke-width="20" stroke-linejoin="round"/>
+          <circle cx="256" cy="256" r="96" fill="white"/>
+          <circle cx="256" cy="256" r="60" fill="#4f46e5"/>
+          <polyline points="216,282 238,250 258,266 298,224" stroke="white" stroke-width="15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="281,220 298,224 294,241" stroke="white" stroke-width="15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="224" cy="230" r="14" fill="white" opacity="0.45"/>
+        </svg>
+        <span><strong>MeVê</strong> Contas</span>
     </a>
     <div class="lp-nav-links">
         <a href="#precos" class="btn-ghost">Preços</a>

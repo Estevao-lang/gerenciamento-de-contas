@@ -3,8 +3,22 @@
 {% block content %}
 <div style="max-width:400px;margin:2.5rem auto">
     <div class="text-center mb-4">
-        <i class="bi bi-wallet2" style="font-size:3rem;color:var(--primary)"></i>
-        <h2 style="font-weight:800;margin-top:.5rem">MeVê Contas</h2>
+        <svg width="64" height="64" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style="border-radius:16px">
+            <defs>
+                <linearGradient id="lbg2" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#4f46e5"/>
+                    <stop offset="100%" stop-color="#1e1b4b"/>
+                </linearGradient>
+            </defs>
+            <rect width="512" height="512" rx="110" fill="url(#lbg2)"/>
+            <path d="M50 256 Q256 88 462 256 Q256 424 50 256Z" fill="white" fill-opacity="0.07" stroke="white" stroke-width="20" stroke-linejoin="round"/>
+            <circle cx="256" cy="256" r="96" fill="white"/>
+            <circle cx="256" cy="256" r="60" fill="#4f46e5"/>
+            <polyline points="216,282 238,250 258,266 298,224" stroke="white" stroke-width="15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="281,220 298,224 294,241" stroke="white" stroke-width="15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="224" cy="230" r="14" fill="white" opacity="0.45"/>
+        </svg>
+        <h2 style="font-weight:800;margin-top:.75rem"><strong>MeVê</strong> Contas</h2>
         <p class="text-muted" style="font-size:.9rem">Entre na sua conta</p>
     </div>
 

@@ -1,35 +1,54 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4f46e5"/>
-      <stop offset="100%" style="stop-color:#1e1b4b"/>
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
     </linearGradient>
-    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:0.4"/>
-      <stop offset="100%" style="stop-color:#818cf8;stop-opacity:0"/>
+    <linearGradient id="iris" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e0e7ff"/>
     </linearGradient>
   </defs>
 
   <!-- Fundo arredondado -->
   <rect width="512" height="512" rx="110" fill="url(#bg)"/>
-  <rect width="512" height="512" rx="110" fill="url(#shine)"/>
 
-  <!-- Carteira / wallet -->
-  <!-- Corpo da carteira -->
-  <rect x="80" y="160" width="352" height="220" rx="28" fill="none"
-        stroke="white" stroke-width="22" stroke-linecap="round"/>
+  <!-- Reflexo sutil no canto superior esquerdo -->
+  <ellipse cx="160" cy="140" rx="140" ry="80" fill="white" opacity="0.06" transform="rotate(-30 160 140)"/>
 
-  <!-- Aba superior -->
-  <path d="M80 210 L80 188 Q80 160 108 160 L340 160 Q368 160 368 188 L368 210"
-        fill="none" stroke="white" stroke-width="22" stroke-linecap="round"/>
+  <!-- Olho — formato amêndoa -->
+  <path d="M50 256 Q256 88 462 256 Q256 424 50 256Z"
+        fill="white" fill-opacity="0.07"
+        stroke="white" stroke-width="18" stroke-linejoin="round"/>
 
-  <!-- Bolso direito (compartimento) -->
-  <rect x="300" y="230" width="110" height="80" rx="18"
-        fill="white" opacity="0.18"/>
-  <circle cx="355" cy="270" r="16" fill="white" opacity="0.7"/>
+  <!-- Cílios superiores (toque elegante) -->
+  <line x1="180" y1="136" x2="172" y2="108" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+  <line x1="256" y1="108" x2="256" y2="78"  stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+  <line x1="332" y1="136" x2="340" y2="108" stroke="white" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
 
-  <!-- Cifrão estilizado -->
-  <text x="176" y="320" font-family="'Inter',Arial,sans-serif"
-        font-size="130" font-weight="900" fill="white" opacity="0.95"
-        letter-spacing="-4">R$</text>
+  <!-- Íris (branca) -->
+  <circle cx="256" cy="256" r="96" fill="url(#iris)"/>
+
+  <!-- Pupila (roxa) -->
+  <circle cx="256" cy="256" r="60" fill="#4f46e5"/>
+
+  <!-- Linha de tendência de alta dentro da pupila -->
+  <polyline points="216,282 238,250 258,266 298,224"
+            stroke="white" stroke-width="14" fill="none"
+            stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Ponta da seta -->
+  <polyline points="281,220 298,224 294,241"
+            stroke="white" stroke-width="14" fill="none"
+            stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Reflexo do olho (brilho) -->
+  <circle cx="224" cy="230" r="14" fill="white" opacity="0.45"/>
+  <circle cx="240" cy="222" r="7"  fill="white" opacity="0.25"/>
+
+  <!-- Texto "MV" embaixo -->
+  <text x="256" y="430"
+        font-family="'Inter','Segoe UI',Arial,sans-serif"
+        font-size="96" font-weight="900"
+        fill="white" opacity="0.88"
+        text-anchor="middle" letter-spacing="4">MV</text>
 </svg>
