@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from datetime import datetime, timedelta, date
 from calendar import monthrange
-from sqlalchemy import func, text
+from sqlalchemy import func, text, Numeric
 import os
 from io import BytesIO
 import base64
@@ -47,31 +47,35 @@ def format_currency(value):
         return "R$ 0,00"
     return f"R$ {value:,.2f}".replace(',', 'temp').replace('.', ',').replace('temp', '.')
 
+MON = db.Numeric(12, 2)   # tipo para valores monetários
+
 # Modelo de Usuário
 class Usuario(db.Model, UserMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    nome = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    senha = db.Column(db.String(200), nullable=False)
-    limite_alerta = db.Column(db.Float, default=1000.0)
-    saldo = db.Column(db.Float, default=0.0)
-    contas = db.relationship('Conta', backref='usuario', lazy=True, cascade="all, delete-orphan")
-    listas_compras = db.relationship('ListaCompras', backref='usuario', lazy=True, cascade="all, delete-orphan")
-    contas_fixas = db.relationship('ContaFixa', backref='usuario', lazy=True, cascade="all, delete-orphan")
+    id            = db.Column(db.Integer, primary_key=True)
+    nome          = db.Column(db.String(100), nullable=False)
+    email         = db.Column(db.String(100), unique=True, nullable=False)
+    senha         = db.Column(db.String(255), nullable=False)
+    limite_alerta = db.Column(MON, default=1000.0)
+    saldo         = db.Column(MON, default=0.0)
+    criado_em     = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)
+    contas        = db.relationship('Conta', backref='usuario', lazy=True, cascade="all, delete-orphan")
+    listas_compras= db.relationship('ListaCompras', backref='usuario', lazy=True, cascade="all, delete-orphan")
+    contas_fixas  = db.relationship('ContaFixa', backref='usuario', lazy=True, cascade="all, delete-orphan")
 
 # Modelo de Conta Fixa (recorrente)
 class ContaFixa(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    descricao = db.Column(db.String(200), nullable=False)
-    valor = db.Column(db.Float, nullable=False)
-    categoria = db.Column(db.String(50), default='Outros')
-    dia_vencimento = db.Column(db.Integer, nullable=False)  # 1-28
-    recorrencia = db.Column(db.String(20), default='mensal')  # mensal, bimestral, trimestral, semestral, anual
-    data_inicio = db.Column(db.Date, nullable=False)
-    data_fim = db.Column(db.Date, nullable=True)            # None = sem fim
-    parcelas_total = db.Column(db.Integer, nullable=True)   # None = sem limite
-    ativa = db.Column(db.Boolean, default=True)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    id             = db.Column(db.Integer, primary_key=True)
+    descricao      = db.Column(db.String(200), nullable=False)
+    valor          = db.Column(MON, nullable=False)
+    categoria      = db.Column(db.String(50), default='Outros')
+    dia_vencimento = db.Column(db.Integer, nullable=False)
+    recorrencia    = db.Column(db.String(20), default='mensal')
+    data_inicio    = db.Column(db.Date, nullable=False)
+    data_fim       = db.Column(db.Date, nullable=True)
+    parcelas_total = db.Column(db.Integer, nullable=True)
+    ativa          = db.Column(db.Boolean, default=True)
+    usuario_id     = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    criado_em      = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)
 
     @property
     def parcelas_geradas(self):
@@ -87,14 +91,16 @@ class ContaFixa(db.Model):
 
 # Modelo de Conta
 class Conta(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    descricao = db.Column(db.String(200), nullable=False)
-    valor = db.Column(db.Float, nullable=False)
+    id              = db.Column(db.Integer, primary_key=True)
+    descricao       = db.Column(db.String(200), nullable=False)
+    valor           = db.Column(MON, nullable=False)
     data_vencimento = db.Column(db.Date, nullable=False)
-    paga = db.Column(db.Boolean, default=False)
-    categoria = db.Column(db.String(50), default="Outros")
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-    conta_fixa_id = db.Column(db.Integer, db.ForeignKey('conta_fixa.id'), nullable=True)
+    data_pagamento  = db.Column(db.Date, nullable=True)   # preenchida ao pagar
+    paga            = db.Column(db.Boolean, default=False)
+    categoria       = db.Column(db.String(50), default="Outros")
+    usuario_id      = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    conta_fixa_id   = db.Column(db.Integer, db.ForeignKey('conta_fixa.id'), nullable=True)
+    criado_em       = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)
 
     @property
     def dias_vencimento(self):
@@ -103,20 +109,21 @@ class Conta(db.Model):
 
 # Modelo: Item da lista de compras
 class ItemLista(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id        = db.Column(db.Integer, primary_key=True)
     descricao = db.Column(db.String(200), nullable=False)
-    valor = db.Column(db.Float, nullable=False)
-    lista_id = db.Column(db.Integer, db.ForeignKey('lista_compras.id'), nullable=False)
+    valor     = db.Column(MON, nullable=False)
+    lista_id  = db.Column(db.Integer, db.ForeignKey('lista_compras.id'), nullable=False)
 
 # Modelo: Lista de compras
 class ListaCompras(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    titulo = db.Column(db.String(100), nullable=False)
+    id           = db.Column(db.Integer, primary_key=True)
+    titulo       = db.Column(db.String(100), nullable=False)
     data_criacao = db.Column(db.Date, nullable=False, default=datetime.today)
-    finalizada = db.Column(db.Boolean, default=False)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-    itens = db.relationship('ItemLista', backref='lista', lazy=True, cascade="all, delete-orphan")
-    
+    finalizada   = db.Column(db.Boolean, default=False)
+    usuario_id   = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    criado_em    = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)
+    itens        = db.relationship('ItemLista', backref='lista', lazy=True, cascade="all, delete-orphan")
+
     @property
     def total(self):
         return sum(item.valor for item in self.itens) if self.itens else 0
@@ -648,6 +655,7 @@ def pagar_conta(id):
     
     if not conta.paga:
         conta.paga = True
+        conta.data_pagamento = datetime.today().date()
         current_user.saldo -= conta.valor
         db.session.commit()
         verificar_alertas(current_user)

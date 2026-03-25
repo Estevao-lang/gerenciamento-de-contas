@@ -10,12 +10,30 @@ from sqlalchemy import text
 # Cria tabelas e aplica migrations no cold start do Vercel
 with app.app_context():
     db.create_all()
+    _migrations = [
+        # conta_fixa_id
+        "ALTER TABLE conta ADD COLUMN IF NOT EXISTS conta_fixa_id INTEGER REFERENCES conta_fixa(id) ON DELETE SET NULL",
+        # data_pagamento
+        "ALTER TABLE conta ADD COLUMN IF NOT EXISTS data_pagamento DATE",
+        # criado_em nas tabelas
+        "ALTER TABLE conta         ADD COLUMN IF NOT EXISTS criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+        "ALTER TABLE usuario        ADD COLUMN IF NOT EXISTS criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+        "ALTER TABLE lista_compras  ADD COLUMN IF NOT EXISTS criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+        "ALTER TABLE conta_fixa     ADD COLUMN IF NOT EXISTS criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+        # preenche data_pagamento retroativamente
+        "UPDATE conta SET data_pagamento = data_vencimento WHERE paga = TRUE AND data_pagamento IS NULL",
+        # índices
+        "CREATE INDEX IF NOT EXISTS idx_conta_fixa_usuario ON conta_fixa(usuario_id)",
+        "CREATE INDEX IF NOT EXISTS idx_conta_paga         ON conta(usuario_id, paga)",
+        "CREATE INDEX IF NOT EXISTS idx_conta_fixa_ref     ON conta(conta_fixa_id)",
+    ]
     try:
         with db.engine.connect() as conn:
-            conn.execute(text(
-                "ALTER TABLE conta ADD COLUMN IF NOT EXISTS conta_fixa_id "
-                "INTEGER REFERENCES conta_fixa(id) ON DELETE SET NULL"
-            ))
+            for sql in _migrations:
+                try:
+                    conn.execute(text(sql))
+                except Exception:
+                    pass
             conn.commit()
     except Exception:
         pass
