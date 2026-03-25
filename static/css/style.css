@@ -48,8 +48,6 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    /* espaço para navbar topo + bottom nav mobile */
-    padding-bottom: var(--bottomnav-h);
 }
 
 /* ===== NAVBAR TOPO ===== */
@@ -524,19 +522,16 @@ body {
 .page-item.active .page-link  { background: var(--primary); border-color: var(--primary); color: #fff; }
 .page-item.disabled .page-link { opacity: .4; pointer-events: none; }
 
-/* ===== FOOTER (desktop) ===== */
+/* ===== FOOTER (desktop only) ===== */
 footer {
     display: none; /* esconde no mobile — bottom nav já substitui */
-    position: fixed;
-    bottom: 0;
-    width: 100%;
     background: linear-gradient(135deg, var(--primary) 0%, var(--bg-nav) 100%);
     color: rgba(255,255,255,.8);
     padding: .65rem 0;
     text-align: center;
     font-size: .8rem;
     font-weight: 500;
-    z-index: 100;
+    margin-top: auto;
 }
 
 /* ===== ANIMAÇÕES ===== */
@@ -562,7 +557,7 @@ footer {
 
 /* ===== DESKTOP (≥ 768px) ===== */
 @media (min-width: 768px) {
-    body { padding-bottom: 56px; } /* footer fixo desktop */
+    body { padding-bottom: 0; }
 
     footer { display: block; }
 
@@ -579,12 +574,20 @@ footer {
 
 /* ===== MOBILE (< 768px) ===== */
 @media (max-width: 767px) {
+    body { padding-bottom: var(--bottomnav-h); } /* espaço para o bottom nav fixo */
+
     .bottom-nav { display: flex !important; }
 
-    /* Esconde links da navbar no mobile (substituídos pelo bottom nav) */
-    .navbar .navbar-nav { display: none !important; }
-    .navbar-collapse     { display: none !important; }
-    .navbar-toggler      { display: none !important; }
+    /* Esconde completamente a navbar collapse no mobile (substituída pelo bottom nav) */
+    .navbar-collapse,
+    .navbar-collapse.show,
+    .navbar-collapse.collapsing,
+    .navbar .navbar-nav,
+    .navbar-toggler {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
 
     .stats-container {
         grid-template-columns: 1fr 1fr;
