@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2><i class="bi bi-arrow-repeat"></i> Contas Fixas</h2>
+    <a href="{{ url_for('adicionar_conta_fixa') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nova Conta Fixa
+    </a>
+</div>
+
+<!-- Resumo -->
+<div class="stats-container" style="grid-template-columns: repeat(2,1fr); margin-bottom:1.25rem;">
+    <div class="stats-card">
+        <div class="card-title">Compromisso Mensal</div>
+        <div class="card-text text-danger">{{ format_currency(total_mensal) }}</div>
+        <small class="text-muted">contas mensais ativas</small>
+    </div>
+    <div class="stats-card">
+        <div class="card-title">Total Cadastradas</div>
+        <div class="card-text">{{ contas_fixas | length }}</div>
+        <small class="text-muted">{{ contas_fixas | selectattr('ativa') | list | length }} ativas</small>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-calendar-check"></i> Seus compromissos recorrentes
+        <small class="ms-auto opacity-75" style="font-weight:400">As contas são geradas automaticamente todo mês</small>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-card-mobile">
+            <thead>
+                <tr>
+                    <th>Descrição</th>
+                    <th>Valor</th>
+                    <th>Dia</th>
+                    <th class="d-mobile-none">Recorrência</th>
+                    <th class="d-mobile-none">Categoria</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cf in contas_fixas %}
+                <tr class="{% if not cf.ativa %}opacity-50{% endif %}">
+                    <td data-label="Descrição">
+                        <strong>{{ cf.descricao }}</strong>
+                        {% if cf.parcelas_total %}
+                        <br><small class="text-muted">{{ cf.parcelas_geradas }}/{{ cf.parcelas_total }} parcelas</small>
+                        {% endif %}
+                        {% if cf.data_fim %}
+                        <br><small class="text-muted">até {{ cf.data_fim.strftime('%m/%Y') }}</small>
+                        {% endif %}
+                    </td>
+                    <td data-label="Valor">{{ format_currency(cf.valor) }}</td>
+                    <td data-label="Dia">
+                        <span class="badge bg-secondary">Dia {{ cf.dia_vencimento }}</span>
+                    </td>
+                    <td data-label="Recorrência" class="d-mobile-none">
+                        <span class="badge bg-info">{{ cf.label_recorrencia }}</span>
+                    </td>
+                    <td data-label="Categoria" class="d-mobile-none">
+                        <span class="badge bg-secondary">{{ cf.categoria }}</span>
+                    </td>
+                    <td data-label="Status">
+                        {% if cf.ativa %}
+                            <span class="badge bg-success"><i class="bi bi-play-fill"></i> Ativa</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i class="bi bi-pause-fill"></i> Pausada</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Ações" class="actions-cell">
+                        <a href="{{ url_for('editar_conta_fixa', id=cf.id) }}" class="btn btn-sm btn-outline-primary" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{{ url_for('toggle_conta_fixa', id=cf.id) }}" class="btn btn-sm btn-outline-warning" title="{{ 'Pausar' if cf.ativa else 'Ativar' }}">
+                            <i class="bi bi-{{ 'pause' if cf.ativa else 'play' }}-fill"></i>
+                        </a>
+                        <a href="{{ url_for('excluir_conta_fixa', id=cf.id) }}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Remover esta conta fixa? As parcelas já geradas serão mantidas.')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <i class="bi bi-arrow-repeat" style="font-size:2.5rem;display:block;margin-bottom:.75rem;opacity:.3"></i>
+                        <strong>Nenhuma conta fixa cadastrada</strong><br>
+                        <small>Cadastre aluguel, empréstimos, assinaturas e outros compromissos recorrentes.</small>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card" style="background:linear-gradient(135deg,#f0f4ff,#eff6ff);border:1px solid #c7d7fe;">
+    <div class="card-body" style="padding:1rem">
+        <p class="mb-1" style="font-weight:700;color:var(--primary)"><i class="bi bi-lightbulb"></i> Como funciona</p>
+        <ul class="mb-0" style="font-size:.85rem;color:var(--text-muted);padding-left:1.2rem">
+            <li>As contas são geradas automaticamente no início de cada mês</li>
+            <li>Você pode pausar temporariamente sem perder o histórico</li>
+            <li>Para empréstimos, defina o número de parcelas — ela se encerra automaticamente</li>
+            <li>Defina uma data de fim para contratos com prazo (ex: aluguel por 12 meses)</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

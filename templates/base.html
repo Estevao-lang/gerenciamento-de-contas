@@ -64,6 +64,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('listar_contas_fixas') }}">
+                            <i class="bi bi-arrow-repeat"></i> Fixas
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('listar_listas_compras') }}">
                             <i class="bi bi-cart3"></i> Compras
                         </a>
@@ -115,9 +120,9 @@
             <i class="bi bi-plus-circle-fill" style="color:var(--primary);font-size:1.7rem"></i>
             <span>Nova</span>
         </a>
-        <a href="{{ url_for('listar_listas_compras') }}" class="bottom-nav-item {% if 'lista' in request.endpoint %}active{% endif %}">
-            <i class="bi bi-cart3"></i>
-            <span>Compras</span>
+        <a href="{{ url_for('listar_contas_fixas') }}" class="bottom-nav-item {% if 'conta_fixa' in request.endpoint %}active{% endif %}">
+            <i class="bi bi-arrow-repeat"></i>
+            <span>Fixas</span>
         </a>
         <a href="{{ url_for('perfil') }}" class="bottom-nav-item {% if request.endpoint == 'perfil' %}active{% endif %}">
             <i class="bi bi-person"></i>

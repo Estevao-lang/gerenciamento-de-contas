@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>
+        <i class="bi bi-arrow-repeat"></i>
+        {{ 'Editar Conta Fixa' if cf else 'Nova Conta Fixa' }}
+    </h2>
+    <a href="{{ url_for('listar_contas_fixas') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-calendar-plus"></i>
+        {{ 'Editar compromisso recorrente' if cf else 'Cadastrar compromisso recorrente' }}
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row g-3">
+
+                <!-- Descrição -->
+                <div class="col-12">
+                    <label class="form-label">Descrição <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="descricao" required
+                           placeholder="Ex: Aluguel, Empréstimo Banco, Netflix..."
+                           value="{{ cf.descricao if cf else '' }}">
+                </div>
+
+                <!-- Valor -->
+                <div class="col-6">
+                    <label class="form-label">Valor <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="valor" required
+                           placeholder="R$ 0,00" inputmode="decimal"
+                           value="{{ '%.2f'|format(cf.valor)|replace('.',',') if cf else '' }}">
+                </div>
+
+                <!-- Dia do vencimento -->
+                <div class="col-6">
+                    <label class="form-label">Dia do vencimento <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" name="dia_vencimento" required
+                           min="1" max="28" placeholder="Ex: 5"
+                           value="{{ cf.dia_vencimento if cf else '' }}">
+                    <div class="form-text">Use até dia 28 (segurança para todos os meses)</div>
+                </div>
+
+                <!-- Recorrência -->
+                <div class="col-6">
+                    <label class="form-label">Recorrência</label>
+                    <select class="form-select" name="recorrencia">
+                        {% for val, label in recorrencias %}
+                        <option value="{{ val }}" {% if cf and cf.recorrencia == val %}selected{% elif not cf and val == 'mensal' %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Categoria -->
+                <div class="col-6">
+                    <label class="form-label">Categoria</label>
+                    <select class="form-select" name="categoria">
+                        {% for cat in categorias %}
+                        <option value="{{ cat }}" {% if cf and cf.categoria == cat %}selected{% endif %}>
+                            {{ cat }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Data início -->
+                <div class="col-6">
+                    <label class="form-label">Data de início <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" name="data_inicio" required
+                           value="{{ cf.data_inicio.strftime('%Y-%m-%d') if cf else '' }}">
+                </div>
+
+                <!-- Data fim (opcional) -->
+                <div class="col-6">
+                    <label class="form-label">Data de fim <small class="text-muted">(opcional)</small></label>
+                    <input type="date" class="form-control" name="data_fim"
+                           value="{{ cf.data_fim.strftime('%Y-%m-%d') if cf and cf.data_fim else '' }}">
+                    <div class="form-text">Deixe em branco para contrato por tempo indeterminado</div>
+                </div>
+
+                <!-- Parcelas (opcional) -->
+                <div class="col-12">
+                    <label class="form-label">Número de parcelas <small class="text-muted">(opcional)</small></label>
+                    <input type="number" class="form-control" name="parcelas_total"
+                           min="1" placeholder="Ex: 36 (para empréstimo de 36 meses)"
+                           value="{{ cf.parcelas_total if cf and cf.parcelas_total else '' }}">
+                    <div class="form-text">
+                        Para empréstimos e financiamentos. Deixe em branco para contas sem limite de parcelas (aluguel, assinaturas).
+                    </div>
+                </div>
+
+                <!-- Botões -->
+                <div class="col-12 d-grid gap-2 d-md-flex justify-content-md-end mt-2">
+                    <a href="{{ url_for('listar_contas_fixas') }}" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i>
+                        {{ 'Salvar alterações' if cf else 'Cadastrar conta fixa' }}
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

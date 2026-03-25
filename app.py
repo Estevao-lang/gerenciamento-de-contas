@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from datetime import datetime, timedelta
-from sqlalchemy import func
+from datetime import datetime, timedelta, date
+from calendar import monthrange
+from sqlalchemy import func, text
 import os
 from io import BytesIO
 import base64
@@ -51,11 +52,38 @@ class Usuario(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
-    senha = db.Column(db.String(200), nullable=False)  # Aumentado para hash
+    senha = db.Column(db.String(200), nullable=False)
     limite_alerta = db.Column(db.Float, default=1000.0)
     saldo = db.Column(db.Float, default=0.0)
     contas = db.relationship('Conta', backref='usuario', lazy=True, cascade="all, delete-orphan")
     listas_compras = db.relationship('ListaCompras', backref='usuario', lazy=True, cascade="all, delete-orphan")
+    contas_fixas = db.relationship('ContaFixa', backref='usuario', lazy=True, cascade="all, delete-orphan")
+
+# Modelo de Conta Fixa (recorrente)
+class ContaFixa(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    descricao = db.Column(db.String(200), nullable=False)
+    valor = db.Column(db.Float, nullable=False)
+    categoria = db.Column(db.String(50), default='Outros')
+    dia_vencimento = db.Column(db.Integer, nullable=False)  # 1-28
+    recorrencia = db.Column(db.String(20), default='mensal')  # mensal, bimestral, trimestral, semestral, anual
+    data_inicio = db.Column(db.Date, nullable=False)
+    data_fim = db.Column(db.Date, nullable=True)            # None = sem fim
+    parcelas_total = db.Column(db.Integer, nullable=True)   # None = sem limite
+    ativa = db.Column(db.Boolean, default=True)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+
+    @property
+    def parcelas_geradas(self):
+        return Conta.query.filter_by(conta_fixa_id=self.id).count()
+
+    @property
+    def label_recorrencia(self):
+        labels = {
+            'mensal': 'Mensal', 'bimestral': 'Bimestral',
+            'trimestral': 'Trimestral', 'semestral': 'Semestral', 'anual': 'Anual'
+        }
+        return labels.get(self.recorrencia, self.recorrencia)
 
 # Modelo de Conta
 class Conta(db.Model):
@@ -66,7 +94,8 @@ class Conta(db.Model):
     paga = db.Column(db.Boolean, default=False)
     categoria = db.Column(db.String(50), default="Outros")
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-    
+    conta_fixa_id = db.Column(db.Integer, db.ForeignKey('conta_fixa.id'), nullable=True)
+
     @property
     def dias_vencimento(self):
         hoje = datetime.today().date()
@@ -128,6 +157,69 @@ def verificar_alertas(usuario):
         """
         enviar_email(usuario.email, assunto, corpo)
         flash('Limite de gastos excedido! Verifique seu email para detalhes.', 'warning')
+
+def _e_mes_recorrente(cf, ano, mes):
+    """Verifica se o mês/ano cai num ciclo válido da recorrência."""
+    intervalos = {'mensal': 1, 'bimestral': 2, 'trimestral': 3, 'semestral': 6, 'anual': 12}
+    intervalo = intervalos.get(cf.recorrencia, 1)
+    if intervalo == 1:
+        return True
+    meses_diff = (ano - cf.data_inicio.year) * 12 + (mes - cf.data_inicio.month)
+    return meses_diff % intervalo == 0
+
+def gerar_contas_fixas(usuario_id):
+    """Gera Contas a partir das ContaFixas ativas para o mês atual e o próximo."""
+    hoje = datetime.today().date()
+    # Meses a verificar: atual e próximo
+    meses_alvo = []
+    for delta in range(2):
+        m = hoje.month + delta
+        y = hoje.year + (m - 1) // 12
+        m = ((m - 1) % 12) + 1
+        meses_alvo.append((y, m))
+
+    contas_fixas = ContaFixa.query.filter_by(usuario_id=usuario_id, ativa=True).all()
+    gerou = False
+
+    for cf in contas_fixas:
+        for ano, mes in meses_alvo:
+            ultimo_dia = monthrange(ano, mes)[1]
+            dia = min(cf.dia_vencimento, ultimo_dia)
+            vencimento = date(ano, mes, dia)
+
+            if vencimento < cf.data_inicio:
+                continue
+            if cf.data_fim and vencimento > cf.data_fim:
+                continue
+            if not _e_mes_recorrente(cf, ano, mes):
+                continue
+
+            # Verifica limite de parcelas
+            if cf.parcelas_total:
+                total_geradas = Conta.query.filter_by(conta_fixa_id=cf.id).count()
+                if total_geradas >= cf.parcelas_total:
+                    cf.ativa = False
+                    db.session.flush()
+                    break
+
+            # Evita duplicatas
+            if Conta.query.filter_by(conta_fixa_id=cf.id, data_vencimento=vencimento).first():
+                continue
+
+            nova = Conta(
+                descricao=cf.descricao,
+                valor=cf.valor,
+                data_vencimento=vencimento,
+                categoria=cf.categoria,
+                paga=False,
+                usuario_id=usuario_id,
+                conta_fixa_id=cf.id
+            )
+            db.session.add(nova)
+            gerou = True
+
+    if gerou:
+        db.session.commit()
 
 def gerar_grafico_categorias(usuario_id):
     import matplotlib
@@ -289,9 +381,10 @@ def index():
         Conta.data_vencimento >= hoje
     ).order_by(Conta.data_vencimento).limit(5).all()
     
+    gerar_contas_fixas(current_user.id)
     verificar_alertas(current_user)
-    
-    return render_template('index.html', 
+
+    return render_template('index.html',
                          total_pago=format_currency(total_pago),
                          total_pendente=format_currency(total_pendente),
                          saldo=format_currency(current_user.saldo),
@@ -420,6 +513,158 @@ def pagar_conta(id):
         flash('Esta conta já está paga', 'info')
     
     return redirect(url_for('listar_contas'))
+
+# ────────────────────────────────────────────────────────────
+# Rotas: Contas Fixas (recorrentes)
+# ────────────────────────────────────────────────────────────
+
+CATEGORIAS = [
+    "Moradia", "Alimentação", "Transporte", "Saúde", "Educação",
+    "Lazer", "Vestuário", "Tecnologia", "Assinaturas", "Serviços",
+    "Impostos", "Investimentos", "Empréstimo", "Seguro", "Outros"
+]
+
+RECORRENCIAS = [
+    ('mensal', 'Mensal'),
+    ('bimestral', 'Bimestral (a cada 2 meses)'),
+    ('trimestral', 'Trimestral (a cada 3 meses)'),
+    ('semestral', 'Semestral (a cada 6 meses)'),
+    ('anual', 'Anual'),
+]
+
+@app.route('/contas_fixas')
+@login_required
+def listar_contas_fixas():
+    contas_fixas = ContaFixa.query.filter_by(usuario_id=current_user.id)\
+                                  .order_by(ContaFixa.ativa.desc(), ContaFixa.dia_vencimento).all()
+    total_mensal = sum(
+        cf.valor for cf in contas_fixas
+        if cf.ativa and cf.recorrencia == 'mensal'
+    )
+    return render_template('contas_fixas.html',
+                           contas_fixas=contas_fixas,
+                           total_mensal=total_mensal,
+                           format_currency=format_currency)
+
+
+@app.route('/contas_fixas/adicionar', methods=['GET', 'POST'])
+@login_required
+def adicionar_conta_fixa():
+    if request.method == 'POST':
+        descricao = request.form['descricao'].strip()
+        valor = parse_brl_number(request.form['valor'])
+        categoria = request.form.get('categoria', 'Outros')
+        dia = int(request.form['dia_vencimento'])
+        recorrencia = request.form.get('recorrencia', 'mensal')
+        data_inicio = datetime.strptime(request.form['data_inicio'], '%Y-%m-%d').date()
+
+        data_fim = None
+        if request.form.get('data_fim'):
+            data_fim = datetime.strptime(request.form['data_fim'], '%Y-%m-%d').date()
+
+        parcelas_total = None
+        if request.form.get('parcelas_total'):
+            try:
+                parcelas_total = int(request.form['parcelas_total'])
+            except ValueError:
+                pass
+
+        if not descricao:
+            flash('Descrição obrigatória.', 'danger')
+            return render_template('adicionar_conta_fixa.html', categorias=CATEGORIAS, recorrencias=RECORRENCIAS)
+        if valor is None or valor <= 0:
+            flash('Valor inválido.', 'danger')
+            return render_template('adicionar_conta_fixa.html', categorias=CATEGORIAS, recorrencias=RECORRENCIAS)
+        if not (1 <= dia <= 28):
+            flash('Dia de vencimento deve ser entre 1 e 28.', 'danger')
+            return render_template('adicionar_conta_fixa.html', categorias=CATEGORIAS, recorrencias=RECORRENCIAS)
+
+        nova = ContaFixa(
+            descricao=descricao,
+            valor=valor,
+            categoria=categoria,
+            dia_vencimento=dia,
+            recorrencia=recorrencia,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            parcelas_total=parcelas_total,
+            usuario_id=current_user.id
+        )
+        db.session.add(nova)
+        db.session.commit()
+        gerar_contas_fixas(current_user.id)
+        flash('Conta fixa cadastrada com sucesso!', 'success')
+        return redirect(url_for('listar_contas_fixas'))
+
+    return render_template('adicionar_conta_fixa.html', categorias=CATEGORIAS, recorrencias=RECORRENCIAS)
+
+
+@app.route('/contas_fixas/editar/<int:id>', methods=['GET', 'POST'])
+@login_required
+def editar_conta_fixa(id):
+    cf = ContaFixa.query.get_or_404(id)
+    if cf.usuario_id != current_user.id:
+        flash('Acesso não autorizado!', 'danger')
+        return redirect(url_for('listar_contas_fixas'))
+
+    if request.method == 'POST':
+        valor = parse_brl_number(request.form['valor'])
+        dia = int(request.form['dia_vencimento'])
+
+        if valor is None or valor <= 0:
+            flash('Valor inválido.', 'danger')
+            return render_template('adicionar_conta_fixa.html', cf=cf, categorias=CATEGORIAS, recorrencias=RECORRENCIAS)
+        if not (1 <= dia <= 28):
+            flash('Dia de vencimento deve ser entre 1 e 28.', 'danger')
+            return render_template('adicionar_conta_fixa.html', cf=cf, categorias=CATEGORIAS, recorrencias=RECORRENCIAS)
+
+        cf.descricao = request.form['descricao'].strip()
+        cf.valor = valor
+        cf.categoria = request.form.get('categoria', 'Outros')
+        cf.dia_vencimento = dia
+        cf.recorrencia = request.form.get('recorrencia', 'mensal')
+        cf.data_inicio = datetime.strptime(request.form['data_inicio'], '%Y-%m-%d').date()
+        cf.data_fim = datetime.strptime(request.form['data_fim'], '%Y-%m-%d').date() if request.form.get('data_fim') else None
+        cf.parcelas_total = int(request.form['parcelas_total']) if request.form.get('parcelas_total') else None
+
+        db.session.commit()
+        gerar_contas_fixas(current_user.id)
+        flash('Conta fixa atualizada!', 'success')
+        return redirect(url_for('listar_contas_fixas'))
+
+    return render_template('adicionar_conta_fixa.html', cf=cf, categorias=CATEGORIAS, recorrencias=RECORRENCIAS)
+
+
+@app.route('/contas_fixas/toggle/<int:id>')
+@login_required
+def toggle_conta_fixa(id):
+    cf = ContaFixa.query.get_or_404(id)
+    if cf.usuario_id != current_user.id:
+        flash('Acesso não autorizado!', 'danger')
+        return redirect(url_for('listar_contas_fixas'))
+    cf.ativa = not cf.ativa
+    db.session.commit()
+    if cf.ativa:
+        gerar_contas_fixas(current_user.id)
+    status = 'ativada' if cf.ativa else 'pausada'
+    flash(f'Conta fixa {status}.', 'success')
+    return redirect(url_for('listar_contas_fixas'))
+
+
+@app.route('/contas_fixas/excluir/<int:id>')
+@login_required
+def excluir_conta_fixa(id):
+    cf = ContaFixa.query.get_or_404(id)
+    if cf.usuario_id != current_user.id:
+        flash('Acesso não autorizado!', 'danger')
+        return redirect(url_for('listar_contas_fixas'))
+    # Desvincula as contas geradas (não as exclui)
+    Conta.query.filter_by(conta_fixa_id=cf.id).update({'conta_fixa_id': None})
+    db.session.delete(cf)
+    db.session.commit()
+    flash('Conta fixa removida.', 'success')
+    return redirect(url_for('listar_contas_fixas'))
+
 
 # Rotas para listas de compras
 @app.route('/listas_compras')
@@ -562,6 +807,16 @@ def inject_utils():
 def inicializar_banco():
     with app.app_context():
         db.create_all()
+        # Migração: adiciona conta_fixa_id em conta e tabela conta_fixa se não existirem
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(text(
+                    "ALTER TABLE conta ADD COLUMN IF NOT EXISTS conta_fixa_id "
+                    "INTEGER REFERENCES conta_fixa(id) ON DELETE SET NULL"
+                ))
+                conn.commit()
+        except Exception:
+            pass
         print("Banco de dados inicializado!")
 
 # Chamar a função durante a inicialização
