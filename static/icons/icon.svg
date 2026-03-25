@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f46e5"/>
+      <stop offset="100%" style="stop-color:#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:0.4"/>
+      <stop offset="100%" style="stop-color:#818cf8;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fundo arredondado -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="110" fill="url(#shine)"/>
+
+  <!-- Carteira / wallet -->
+  <!-- Corpo da carteira -->
+  <rect x="80" y="160" width="352" height="220" rx="28" fill="none"
+        stroke="white" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- Aba superior -->
+  <path d="M80 210 L80 188 Q80 160 108 160 L340 160 Q368 160 368 188 L368 210"
+        fill="none" stroke="white" stroke-width="22" stroke-linecap="round"/>
+
+  <!-- Bolso direito (compartimento) -->
+  <rect x="300" y="230" width="110" height="80" rx="18"
+        fill="white" opacity="0.18"/>
+  <circle cx="355" cy="270" r="16" fill="white" opacity="0.7"/>
+
+  <!-- Cifrão estilizado -->
+  <text x="176" y="320" font-family="'Inter',Arial,sans-serif"
+        font-size="130" font-weight="900" fill="white" opacity="0.95"
+        letter-spacing="-4">R$</text>
+</svg>
