@@ -1,60 +1,62 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="text-center mb-5">
-    <h1>Dashboard Financeiro</h1>
-    <p class="lead text-muted">Gerencie suas finanças de forma eficiente e inteligente</p>
-</div>
 
+<!-- Stats -->
 <div class="stats-container">
-    <!-- Novo cartão para o Saldo -->
     <div class="stats-card balance">
-        <h5 class="card-title">Saldo Atual</h5>
-        <h2 class="card-text">{{ saldo }}</h2>
+        <div class="card-title"><i class="bi bi-wallet2"></i> Saldo</div>
+        <div class="card-text">{{ saldo }}</div>
     </div>
-
     <div class="stats-card paid">
-        <h5 class="card-title">Total Pago</h5>
-        <h2 class="card-text">{{ total_pago }}</h2>
+        <div class="card-title"><i class="bi bi-check-circle"></i> Pago</div>
+        <div class="card-text">{{ total_pago }}</div>
     </div>
-
     <div class="stats-card pending">
-        <h5 class="card-title">Total Pendente</h5>
-        <h2 class="card-text">{{ total_pendente }}</h2>
+        <div class="card-title"><i class="bi bi-clock"></i> Pendente</div>
+        <div class="card-text">{{ total_pendente }}</div>
     </div>
 </div>
 
-<div class="card mt-4">
+<!-- Próximas contas -->
+<div class="card">
     <div class="card-header">
-        <i class="bi bi-calendar-check"></i> Próximas Contas a Vencer
+        <i class="bi bi-calendar-check"></i> Próximas a Vencer
     </div>
-    
-    <div class="card-body">
+    <div class="card-body p-0">
         {% if proximas_contas %}
-        <div class="table-container">
-            <table class="table table-hover">
+        <div class="table-responsive">
+            <table class="table table-card-mobile mb-0">
                 <thead>
                     <tr>
                         <th>Descrição</th>
                         <th>Valor</th>
                         <th>Vencimento</th>
-                        <th>Categoria</th>
+                        <th class="d-mobile-none">Categoria</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for conta in proximas_contas %}
                     <tr>
-                        <td>{{ conta.descricao }}</td>
-                        <td>{{ format_currency(conta.valor) }}</td>
-                        <td>{{ conta.data_vencimento.strftime('%d/%m/%Y') }}</td>
-                        <td><span class="badge bg-secondary">{{ conta.categoria }}</span></td>
-                        <td class="btn-group">
-                            <a href="{{ url_for('pagar_conta', id=conta.id) }}" class="btn btn-sm btn-success">
+                        <td data-label="Descrição"><strong>{{ conta.descricao }}</strong></td>
+                        <td data-label="Valor">{{ format_currency(conta.valor) }}</td>
+                        <td data-label="Vencimento">
+                            {{ conta.data_vencimento.strftime('%d/%m/%Y') }}
+                            {% if conta.dias_vencimento <= 3 %}
+                            <span class="badge bg-warning ms-1">{{ conta.dias_vencimento }}d</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Categoria" class="d-mobile-none">
+                            <span class="badge bg-secondary">{{ conta.categoria }}</span>
+                        </td>
+                        <td data-label="Ações" class="actions-cell">
+                            <a href="{{ url_for('pagar_conta', id=conta.id) }}" class="btn btn-sm btn-success"
+                               onclick="return confirm('Marcar como paga?')">
                                 <i class="bi bi-check-lg"></i> Pagar
                             </a>
-                            <a href="{{ url_for('editar_conta', id=conta.id) }}" class="btn btn-sm btn-primary">
-                                <i class="bi bi-pencil"></i> Editar
+                            <a href="{{ url_for('editar_conta', id=conta.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i>
                             </a>
                         </td>
                     </tr>
@@ -63,23 +65,28 @@
             </table>
         </div>
         {% else %}
-        <div class="alert alert-info text-center">
-            <i class="bi bi-info-circle"></i> Nenhuma conta pendente próxima.
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-check2-all" style="font-size:2.5rem;display:block;margin-bottom:.5rem;color:var(--success)"></i>
+            Nenhuma conta pendente próxima.
         </div>
         {% endif %}
-        
-        <div class="btn-group">
-            <a href="{{ url_for('adicionar_conta') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Adicionar Nova Conta
-            </a>
-            <a href="{{ url_for('listar_contas') }}" class="btn btn-outline-primary">
-                <i class="bi bi-list"></i> Ver Todas as Contas
-            </a>
-            <!-- Novo botão para Compras -->
-            <a href="{{ url_for('listar_listas_compras') }}" class="btn btn-warning">
-                <i class="bi bi-cart"></i> Compras
-            </a>
-        </div>
     </div>
 </div>
+
+<!-- Botões de ação -->
+<div class="btn-group btn-group-mobile-stack mt-1">
+    <a href="{{ url_for('adicionar_conta') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Adicionar Conta
+    </a>
+    <a href="{{ url_for('listar_contas') }}" class="btn btn-outline-primary">
+        <i class="bi bi-list"></i> Ver Todas
+    </a>
+    <a href="{{ url_for('listar_listas_compras') }}" class="btn btn-warning">
+        <i class="bi bi-cart3"></i> Compras
+    </a>
+    <a href="{{ url_for('analise') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-graph-up"></i> Análise
+    </a>
+</div>
+
 {% endblock %}

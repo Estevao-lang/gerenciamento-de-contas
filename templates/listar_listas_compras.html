@@ -1,85 +1,96 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2><i class="bi bi-cart"></i> Minhas Listas de Compras</h2>
-    
-    <a href="{{ url_for('adicionar_lista_compras') }}" class="btn btn-primary mb-3">
+<div class="page-header">
+    <h2><i class="bi bi-cart3"></i> Listas de Compras</h2>
+    <a href="{{ url_for('adicionar_lista_compras') }}" class="btn btn-primary">
         <i class="bi bi-plus-circle"></i> Nova Lista
     </a>
-    
-    {% if listas.items %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Data</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for lista in listas.items %}
-                    <tr>
-                        <td>{{ lista.titulo }}</td>
-                        <td>{{ lista.data_criacao.strftime('%d/%m/%Y') }}</td>
-                        <td>{{ format_currency(lista.total) }}</td>
-                        <td>
-                            {% if lista.finalizada %}
-                                <span class="badge bg-success">Finalizada</span>
-                            {% else %}
-                                <span class="badge bg-warning">Em Aberto</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('ver_lista_compras', id=lista.id) }}" class="btn btn-sm btn-info">
-                                <i class="bi bi-eye"></i> Ver
-                            </a>
-                            {% if not lista.finalizada %}
-                                <a href="{{ url_for('finalizar_lista_compras', id=lista.id) }}" class="btn btn-sm btn-success"
-                                    onclick="return confirm('Finalizar a lista debitará {{ format_currency(lista.total) }} do seu saldo. Confirmar?')">
-                                    <i class="bi bi-check"></i> Finalizar
-                                </a>
-                            {% endif %}
-                            <a href="{{ url_for('excluir_lista_compras', id=lista.id) }}" class="btn btn-sm btn-danger"
-                                onclick="return confirm('Tem certeza que deseja excluir esta lista?')">
-                                <i class="bi bi-trash"></i> Excluir
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Paginação -->
-        {% if listas.pages > 1 %}
-        <nav class="mt-3">
-            <ul class="pagination justify-content-center">
-                <li class="page-item {% if not listas.has_prev %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('listar_listas_compras', page=listas.prev_num) }}">Anterior</a>
-                </li>
-                {% for p in listas.iter_pages() %}
-                    {% if p %}
-                        <li class="page-item {% if p == listas.page %}active{% endif %}">
-                            <a class="page-link" href="{{ url_for('listar_listas_compras', page=p) }}">{{ p }}</a>
-                        </li>
-                    {% else %}
-                        <li class="page-item disabled"><span class="page-link">…</span></li>
-                    {% endif %}
-                {% endfor %}
-                <li class="page-item {% if not listas.has_next %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('listar_listas_compras', page=listas.next_num) }}">Próximo</a>
-                </li>
-            </ul>
-        </nav>
-        {% endif %}
-    {% else %}
-        <div class="alert alert-info">
-            Você ainda não criou nenhuma lista de compras.
-        </div>
-    {% endif %}
 </div>
+
+{% if listas.items %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-card-mobile">
+            <thead>
+                <tr>
+                    <th>Título</th>
+                    <th>Total</th>
+                    <th class="d-mobile-none">Data</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lista in listas.items %}
+                <tr>
+                    <td data-label="Título"><strong>{{ lista.titulo }}</strong></td>
+                    <td data-label="Total">{{ format_currency(lista.total) }}</td>
+                    <td data-label="Data" class="d-mobile-none">{{ lista.data_criacao.strftime('%d/%m/%Y') }}</td>
+                    <td data-label="Status">
+                        {% if lista.finalizada %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Finalizada</span>
+                        {% else %}
+                            <span class="badge bg-warning">Em Aberto</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Ações" class="actions-cell">
+                        <a href="{{ url_for('ver_lista_compras', id=lista.id) }}" class="btn btn-sm btn-info">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        {% if not lista.finalizada %}
+                        <a href="{{ url_for('finalizar_lista_compras', id=lista.id) }}" class="btn btn-sm btn-success"
+                           onclick="return confirm('Finalizar e debitar {{ format_currency(lista.total) }}?')">
+                            <i class="bi bi-check"></i>
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('excluir_lista_compras', id=lista.id) }}" class="btn btn-sm btn-outline-danger"
+                           onclick="return confirm('Excluir esta lista?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if listas.pages > 1 %}
+<nav class="mt-2">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not listas.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('listar_listas_compras', page=listas.prev_num) }}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% for p in listas.iter_pages() %}
+            {% if p %}
+                <li class="page-item {% if p == listas.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('listar_listas_compras', page=p) }}">{{ p }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not listas.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('listar_listas_compras', page=listas.next_num) }}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-cart-x" style="font-size:3rem;display:block;margin-bottom:.75rem;opacity:.4"></i>
+        <p class="mb-3">Nenhuma lista criada ainda.</p>
+        <a href="{{ url_for('adicionar_lista_compras') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Criar primeira lista
+        </a>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

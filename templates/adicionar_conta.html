@@ -1,65 +1,63 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0"><i class="bi bi-plus-circle"></i> Adicionar Nova Conta</h4>
+<div class="page-header">
+    <h2><i class="bi bi-plus-circle"></i> Nova Conta</h2>
+</div>
+
+<div class="card" style="max-width:560px;margin:0 auto">
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="descricao" class="form-label">Descrição</label>
+                <input type="text" class="form-control" id="descricao" name="descricao"
+                       placeholder="Ex: Aluguel, Internet..." required>
             </div>
-            <div class="card-body">
-                <form method="POST">
-                    <div class="mb-3">
-                        <label for="descricao" class="form-label">Descrição</label>
-                        <input type="text" class="form-control" id="descricao" name="descricao" required>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="valor" class="form-label">Valor (R$)</label>
-                            <input 
-                                type="text" 
-                                class="form-control" 
-                                id="valor" 
-                                name="valor" 
-                                pattern="^[0-9]{1,3}(\.[0-9]{3})*,[0-9]{2}$"
-                                title="Use formato brasileiro (ex: 1.234,56)" 
-                                required
-                            >
-                            <small class="form-text text-muted">Formato: 1.234,56</small>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="data_vencimento" class="form-label">Data de Vencimento</label>
-                            <input type="date" class="form-control" id="data_vencimento" name="data_vencimento" required>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="categoria" class="form-label">Categoria</label>
-                        <select class="form-select" id="categoria" name="categoria" required>
-                            <option value="">Selecione uma categoria</option>
-                            <option value="Moradia">Moradia</option>
-                            <option value="Alimentação">Alimentação</option>
-                            <option value="Transporte">Transporte</option>
-                            <option value="Saúde">Saúde</option>
-                            <option value="Educação">Educação</option>
-                            <option value="Lazer">Lazer</option>
-                            <option value="Outros">Outros</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3 form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="paga" name="paga">
-                        <label class="form-check-label" for="paga">Conta já está paga?</label>
-                    </div>
-                    
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{{ url_for('listar_contas') }}" class="btn btn-secondary">Cancelar</a>
-                        <button type="submit" class="btn btn-primary">Salvar Conta</button>
-                    </div>
-                </form>
+
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label for="valor" class="form-label">Valor (R$)</label>
+                    <input type="text" class="form-control" id="valor" name="valor"
+                           placeholder="0,00"
+                           pattern="^[0-9]{1,3}(\.[0-9]{3})*,[0-9]{2}$"
+                           title="Formato: 1.234,56" required>
+                </div>
+                <div class="col-6">
+                    <label for="data_vencimento" class="form-label">Vencimento</label>
+                    <input type="date" class="form-control" id="data_vencimento"
+                           name="data_vencimento" required>
+                </div>
             </div>
-        </div>
+
+            <div class="mb-3">
+                <label for="categoria" class="form-label">Categoria</label>
+                <select class="form-select" id="categoria" name="categoria" required>
+                    <option value="">Selecione...</option>
+                    <option value="Moradia">🏠 Moradia</option>
+                    <option value="Alimentação">🛒 Alimentação</option>
+                    <option value="Transporte">🚌 Transporte</option>
+                    <option value="Saúde">❤️ Saúde</option>
+                    <option value="Educação">📚 Educação</option>
+                    <option value="Lazer">🎮 Lazer</option>
+                    <option value="Serviços">📱 Serviços</option>
+                    <option value="Outros">📦 Outros</option>
+                </select>
+            </div>
+
+            <div class="mb-4 form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="paga" name="paga">
+                <label class="form-check-label" for="paga">Conta já está paga?</label>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> Salvar Conta
+                </button>
+                <a href="{{ url_for('listar_contas') }}" class="btn btn-outline-secondary">
+                    Cancelar
+                </a>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}

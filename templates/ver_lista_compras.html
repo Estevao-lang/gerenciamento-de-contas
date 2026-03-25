@@ -1,55 +1,68 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-cart"></i> {{ lista.titulo }}</h2>
-        <span class="badge bg-{% if lista.finalizada %}success{% else %}warning{% endif %}">
-            {{ lista.data_criacao.strftime('%d/%m/%Y') }} - 
-            {% if lista.finalizada %}Finalizada{% else %}Em Aberto{% endif %}
-        </span>
+<div class="page-header">
+    <h2><i class="bi bi-cart3"></i> {{ lista.titulo }}</h2>
+    <span class="badge {% if lista.finalizada %}bg-success{% else %}bg-warning{% endif %}" style="font-size:.85rem;padding:.5em .9em">
+        {% if lista.finalizada %}Finalizada{% else %}Em Aberto{% endif %}
+    </span>
+</div>
+
+<!-- Resumo -->
+<div class="stats-container" style="grid-template-columns:repeat(2,1fr);margin-bottom:1.25rem">
+    <div class="stats-card balance">
+        <div class="card-title">Total da Lista</div>
+        <div class="card-text">{{ format_currency(lista.total) }}</div>
     </div>
-    
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h4 class="mb-0">Total da Lista: {{ format_currency(lista.total) }}</h4>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Valor</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in lista.itens %}
-                        <tr>
-                            <td>{{ item.descricao }}</td>
-                            <td>{{ format_currency(item.valor) }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="2" class="text-center">Nenhum item nesta lista</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <div class="stats-card">
+        <div class="card-title">Itens</div>
+        <div class="card-text">{{ lista.itens | length }}</div>
     </div>
-    
-    <div class="d-flex justify-content-between">
-        <a href="{{ url_for('listar_listas_compras') }}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Voltar
-        </a>
-        
-        {% if not lista.finalizada %}
-            <a href="{{ url_for('finalizar_lista_compras', id=lista.id) }}" class="btn btn-success">
-                <i class="bi bi-check"></i> Finalizar Compra
-            </a>
-        {% endif %}
+</div>
+
+<!-- Itens -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-list-ul"></i> Itens da Lista
     </div>
+    <div class="table-responsive">
+        <table class="table table-card-mobile mb-0">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in lista.itens %}
+                <tr>
+                    <td data-label="Item">{{ item.descricao }}</td>
+                    <td data-label="Valor">{{ format_currency(item.valor) }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="2" class="text-center py-4 text-muted">Nenhum item nesta lista</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Ações -->
+<div class="btn-group btn-group-mobile-stack mt-2">
+    <a href="{{ url_for('listar_listas_compras') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar
+    </a>
+    {% if not lista.finalizada %}
+    <a href="{{ url_for('finalizar_lista_compras', id=lista.id) }}" class="btn btn-success"
+       onclick="return confirm('Finalizar e debitar {{ format_currency(lista.total) }} do saldo?')">
+        <i class="bi bi-check-circle"></i> Finalizar Compra
+    </a>
+    {% endif %}
+    <a href="{{ url_for('excluir_lista_compras', id=lista.id) }}" class="btn btn-outline-danger"
+       onclick="return confirm('Excluir esta lista?')">
+        <i class="bi bi-trash"></i> Excluir
+    </a>
 </div>
 {% endblock %}
