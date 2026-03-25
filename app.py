@@ -221,14 +221,14 @@ def gerar_contas_fixas(usuario_id):
     if gerou:
         db.session.commit()
 
-def get_anthropic_client():
-    """Retorna cliente Anthropic ou None se não configurado."""
+def get_ai_client():
+    """Retorna cliente Groq (gratuito) ou None se não configurado."""
     try:
-        import anthropic
-        api_key = os.getenv('ANTHROPIC_API_KEY')
+        from groq import Groq
+        api_key = os.getenv('GROQ_API_KEY')
         if not api_key:
             return None
-        return anthropic.Anthropic(api_key=api_key)
+        return Groq(api_key=api_key)
     except ImportError:
         return None
 
@@ -304,27 +304,28 @@ DADOS FINANCEIROS DO USUÁRIO:
 @app.route('/api/chat', methods=['POST'])
 @login_required
 def api_chat():
-    client = get_anthropic_client()
+    client = get_ai_client()
     if not client:
-        return jsonify({'error': 'IA não configurada. Adicione ANTHROPIC_API_KEY nas variáveis de ambiente.'}), 503
+        return jsonify({'error': 'IA não configurada. Adicione GROQ_API_KEY nas variáveis de ambiente.'}), 503
 
     data = request.get_json(silent=True) or {}
     messages = data.get('messages', [])
     if not messages:
         return jsonify({'error': 'Mensagem vazia'}), 400
 
-    # Limita histórico a 10 turnos para controlar custo
-    messages = messages[-10:]
+    messages = messages[-10:]  # limita histórico
 
     try:
         contexto = contexto_financeiro(current_user.id)
-        response = client.messages.create(
-            model='claude-haiku-4-5-20251001',
+        completion = client.chat.completions.create(
+            model='llama-3.1-8b-instant',
             max_tokens=600,
-            system=SYSTEM_CHAT.format(contexto=contexto),
-            messages=messages
+            messages=[
+                {'role': 'system', 'content': SYSTEM_CHAT.format(contexto=contexto)},
+                *messages
+            ]
         )
-        return jsonify({'response': response.content[0].text})
+        return jsonify({'response': completion.choices[0].message.content})
     except Exception as e:
         return jsonify({'error': f'Erro na IA: {str(e)}'}), 500
 
@@ -332,14 +333,14 @@ def api_chat():
 @app.route('/api/analise-ia', methods=['POST'])
 @login_required
 def api_analise_ia():
-    client = get_anthropic_client()
+    client = get_ai_client()
     if not client:
-        return jsonify({'error': 'IA não configurada. Adicione ANTHROPIC_API_KEY.'}), 503
+        return jsonify({'error': 'IA não configurada. Adicione GROQ_API_KEY.'}), 503
 
     try:
         contexto = contexto_financeiro(current_user.id)
-        response = client.messages.create(
-            model='claude-haiku-4-5-20251001',
+        completion = client.chat.completions.create(
+            model='llama-3.3-70b-versatile',  # modelo maior para análise detalhada
             max_tokens=900,
             messages=[{
                 'role': 'user',
@@ -355,7 +356,7 @@ Use os dados reais. Seja objetivo e direto.
 {contexto}"""
             }]
         )
-        return jsonify({'analise': response.content[0].text})
+        return jsonify({'analise': completion.choices[0].message.content})
     except Exception as e:
         return jsonify({'error': f'Erro na IA: {str(e)}'}), 500
 
