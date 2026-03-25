@@ -4,9 +4,6 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from datetime import datetime, timedelta
 from sqlalchemy import func
 import os
-import matplotlib
-matplotlib.use('Agg')  # Configuração para evitar conflitos de thread
-import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
 import smtplib
@@ -19,13 +16,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 load_dotenv()
 
 app = Flask(__name__, static_folder='static')
-_secret = os.getenv('SECRET_KEY')
-if not _secret:
-    raise RuntimeError("SECRET_KEY não definida! Adicione SECRET_KEY no arquivo .env")
-app.secret_key = _secret
+app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-troque-em-prod')
 
-# Configuração do PostgreSQL para Render.com
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+# Configuração do PostgreSQL
+_db_url = os.getenv('DATABASE_URL', '')
+# Neon/Render usam "postgres://" — SQLAlchemy exige "postgresql://"
+if _db_url.startswith('postgres://'):
+    _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -132,6 +130,10 @@ def verificar_alertas(usuario):
         flash('Limite de gastos excedido! Verifique seu email para detalhes.', 'warning')
 
 def gerar_grafico_categorias(usuario_id):
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
     categorias = db.session.query(
         Conta.categoria,
         func.sum(Conta.valor).label('total')
