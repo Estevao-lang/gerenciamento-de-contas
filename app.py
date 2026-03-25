@@ -520,7 +520,10 @@ def index():
         Conta.data_vencimento >= hoje
     ).order_by(Conta.data_vencimento).limit(5).all()
     
-    gerar_contas_fixas(current_user.id)
+    try:
+        gerar_contas_fixas(current_user.id)
+    except Exception:
+        db.session.rollback()
     verificar_alertas(current_user)
 
     return render_template('index.html',
