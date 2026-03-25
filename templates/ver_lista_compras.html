@@ -9,7 +9,7 @@
 </div>
 
 <!-- Resumo -->
-<div class="stats-container" style="grid-template-columns:repeat(2,1fr);margin-bottom:1.25rem">
+<div class="stats-container" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.25rem">
     <div class="stats-card balance">
         <div class="card-title">Total da Lista</div>
         <div class="card-text">{{ format_currency(lista.total) }}</div>
@@ -17,6 +17,10 @@
     <div class="stats-card">
         <div class="card-title">Itens</div>
         <div class="card-text">{{ lista.itens | length }}</div>
+    </div>
+    <div class="stats-card">
+        <div class="card-title">Qtd Total</div>
+        <div class="card-text">{{ lista.itens | sum(attribute='quantidade') }}</div>
     </div>
 </div>
 
@@ -29,22 +33,38 @@
         <table class="table table-card-mobile mb-0">
             <thead>
                 <tr>
-                    <th>Item</th>
-                    <th>Valor</th>
+                    <th>Produto</th>
+                    <th>Qtd</th>
+                    <th>Unitário</th>
+                    <th>Subtotal</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in lista.itens %}
                 <tr>
-                    <td data-label="Item">{{ item.descricao }}</td>
-                    <td data-label="Valor">{{ format_currency(item.valor) }}</td>
+                    <td data-label="Produto"><strong>{{ item.descricao }}</strong></td>
+                    <td data-label="Qtd">
+                        <span class="badge bg-secondary">{{ item.quantidade }}x</span>
+                    </td>
+                    <td data-label="Unitário">{{ format_currency(item.valor) }}</td>
+                    <td data-label="Subtotal">
+                        <strong>{{ format_currency(item.subtotal) }}</strong>
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="2" class="text-center py-4 text-muted">Nenhum item nesta lista</td>
+                    <td colspan="4" class="text-center py-4 text-muted">Nenhum item nesta lista</td>
                 </tr>
                 {% endfor %}
             </tbody>
+            {% if lista.itens %}
+            <tfoot style="border-top:2px solid var(--border)">
+                <tr>
+                    <td colspan="3" class="text-end fw-bold">Total:</td>
+                    <td><strong style="color:var(--primary)">{{ format_currency(lista.total) }}</strong></td>
+                </tr>
+            </tfoot>
+            {% endif %}
         </table>
     </div>
 </div>

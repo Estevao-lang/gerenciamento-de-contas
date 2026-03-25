@@ -31,6 +31,8 @@ with app.app_context():
         "ALTER TABLE usuario ADD COLUMN IF NOT EXISTS plano_expira_em DATE",
         "ALTER TABLE usuario ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(100)",
         "ALTER TABLE usuario ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(100)",
+        # quantidade nos itens de lista
+        "ALTER TABLE item_lista ADD COLUMN IF NOT EXISTS quantidade INTEGER NOT NULL DEFAULT 1",
     ]
     try:
         with db.engine.connect() as conn:

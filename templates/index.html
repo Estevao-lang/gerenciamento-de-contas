@@ -51,10 +51,13 @@
                             <span class="badge bg-secondary">{{ conta.categoria }}</span>
                         </td>
                         <td data-label="Ações" class="actions-cell">
-                            <a href="{{ url_for('pagar_conta', id=conta.id) }}" class="btn btn-sm btn-success"
-                               onclick="return confirm('Marcar como paga?')">
-                                <i class="bi bi-check-lg"></i> Pagar
-                            </a>
+                            <form method="POST" action="{{ url_for('pagar_conta', id=conta.id) }}" class="d-inline"
+                                  onsubmit="return confirm('Marcar como paga?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-success">
+                                    <i class="bi bi-check-lg"></i> Pagar
+                                </button>
+                            </form>
                             <a href="{{ url_for('editar_conta', id=conta.id) }}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i>
                             </a>

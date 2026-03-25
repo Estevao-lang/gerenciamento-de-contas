@@ -178,7 +178,12 @@ class ItemLista(db.Model):
     id        = db.Column(db.Integer, primary_key=True)
     descricao = db.Column(db.String(200), nullable=False)
     valor     = db.Column(MON, nullable=False)
+    quantidade = db.Column(db.Integer, default=1, nullable=False)
     lista_id  = db.Column(db.Integer, db.ForeignKey('lista_compras.id'), nullable=False)
+
+    @property
+    def subtotal(self):
+        return self.valor * self.quantidade
 
 # Modelo: Lista de compras
 class ListaCompras(db.Model):
@@ -192,7 +197,7 @@ class ListaCompras(db.Model):
 
     @property
     def total(self):
-        return sum(item.valor for item in self.itens) if self.itens else 0
+        return sum(item.subtotal for item in self.itens) if self.itens else 0
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1015,8 +1020,8 @@ def adicionar_lista_compras():
         # Processar itens
         descricoes = request.form.getlist('item_descricao[]')
         valores = request.form.getlist('item_valor[]')
-        valores_numericos = []
-        
+        quantidades = request.form.getlist('item_quantidade[]')
+
         for i, desc in enumerate(descricoes):
             if desc.strip():
                 valor = parse_brl_number(valores[i])
@@ -1024,11 +1029,17 @@ def adicionar_lista_compras():
                     flash(f'Valor inválido para o item: {desc}', 'danger')
                     db.session.rollback()
                     return render_template('adicionar_lista_compras.html')
-                
-                valores_numericos.append(valor)
+
+                try:
+                    qtd = int(quantidades[i]) if i < len(quantidades) else 1
+                    qtd = max(1, qtd)
+                except (ValueError, IndexError):
+                    qtd = 1
+
                 novo_item = ItemLista(
                     descricao=desc,
                     valor=valor,
+                    quantidade=qtd,
                     lista_id=nova_lista.id
                 )
                 db.session.add(novo_item)
