@@ -335,42 +335,26 @@
 <section class="section section-alt section-center" id="precos">
     <div style="max-width:700px;margin:0 auto">
         <div class="section-tag">Planos</div>
-        <h2>Simples e transparente</h2>
-        <p class="subtitle">Comece grátis. Faça upgrade quando precisar de mais.</p>
-        <div class="pricing-grid">
-            <!-- FREE -->
-            <div class="pricing-card">
-                <div class="pricing-name">Gratuito</div>
+        <h2>Grátis durante o beta</h2>
+        <p class="subtitle">Estamos em fase de lançamento. Por tempo limitado, tudo grátis e sem restrições.</p>
+        <div class="pricing-grid" style="max-width:400px">
+            <div class="pricing-card featured">
+                <div class="pricing-badge">Acesso beta completo</div>
+                <div class="pricing-name">Beta</div>
                 <div class="pricing-price">R$ 0<span>/mês</span></div>
-                <p class="pricing-desc">Para quem está começando a organizar as finanças.</p>
+                <p class="pricing-desc">Acesso completo a todas as funcionalidades durante o período beta.</p>
                 <ul class="pricing-features">
-                    <li><i class="bi bi-check-circle-fill"></i> Até 15 contas por mês</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Até 3 contas fixas</li>
-                    <li><i class="bi bi-check-circle-fill"></i> 2 listas de compras</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Contas ilimitadas</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Contas fixas ilimitadas</li>
+                    <li><i class="bi bi-check-circle-fill"></i> Listas ilimitadas</li>
                     <li><i class="bi bi-check-circle-fill"></i> FinBot IA incluído</li>
                     <li><i class="bi bi-check-circle-fill"></i> App instalável (PWA)</li>
                 </ul>
-                <a href="{{ url_for('registro') }}" class="btn-plan btn-plan-outline">Criar conta grátis</a>
-            </div>
-            <!-- PRO -->
-            <div class="pricing-card featured">
-                <div class="pricing-badge">Mais popular</div>
-                <div class="pricing-name">Pro</div>
-                <div class="pricing-price">R$ 19<span>,90/mês</span></div>
-                <p class="pricing-desc">Para quem quer controle total das finanças.</p>
-                <ul class="pricing-features">
-                    <li><i class="bi bi-check-circle-fill"></i> <strong>Contas ilimitadas</strong></li>
-                    <li><i class="bi bi-check-circle-fill"></i> <strong>Contas fixas ilimitadas</strong></li>
-                    <li><i class="bi bi-check-circle-fill"></i> <strong>Listas ilimitadas</strong></li>
-                    <li><i class="bi bi-check-circle-fill"></i> FinBot IA ilimitado</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Análise IA avançada</li>
-                    <li><i class="bi bi-check-circle-fill"></i> Suporte prioritário</li>
-                </ul>
-                <a href="{{ url_for('registro') }}" class="btn-plan btn-plan-primary">Começar Pro — R$ 19,90/mês</a>
+                <a href="{{ url_for('registro') }}" class="btn-plan btn-plan-primary">Criar conta grátis</a>
             </div>
         </div>
         <p style="margin-top:1.25rem;font-size:.82rem;color:var(--text-muted)">
-            <i class="bi bi-shield-check"></i> Pagamento seguro via Stripe · Cancele quando quiser
+            <i class="bi bi-clock"></i> Planos pagos em breve · Usuários beta terão condições especiais
         </p>
     </div>
 </section>

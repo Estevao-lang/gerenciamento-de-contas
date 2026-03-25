@@ -29,6 +29,10 @@
 </div>
 {% endif %}
 
+<div class="alert alert-info mb-3">
+    <i class="bi bi-stars"></i> <strong>Período beta:</strong> todos os recursos estão liberados gratuitamente. Planos pagos chegam em breve — usuários beta terão condições especiais.
+</div>
+
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem;max-width:700px;margin:0 auto">
 
     <!-- GRATUITO -->
@@ -88,13 +92,11 @@
             {% elif usuario_pro(current_user) %}
             <div class="btn btn-primary d-block text-center" style="pointer-events:none;opacity:.7">Plano ativo ✓</div>
             {% else %}
-            <form method="POST" action="{{ url_for('assinar_pro') }}">
-                <button type="submit" class="btn btn-primary d-block w-100">
-                    <i class="bi bi-credit-card"></i> Assinar por R$ 19,90/mês
-                </button>
-            </form>
+            <div class="btn btn-outline-secondary d-block text-center" style="pointer-events:none">
+                <i class="bi bi-clock"></i> Em breve
+            </div>
             <p style="text-align:center;font-size:.78rem;color:var(--text-muted);margin-top:.75rem">
-                <i class="bi bi-shield-check"></i> Pagamento seguro · Cancele quando quiser
+                Você já tem acesso completo durante o beta
             </p>
             {% endif %}
         </div>

@@ -64,22 +64,7 @@ def usuario_pro(u):
     return True
 
 def check_limite(usuario, recurso):
-    """Retorna True se dentro do limite, False se atingiu o teto do plano gratuito."""
-    if usuario_pro(usuario):
-        return True
-    lim = PLANOS['gratuito']
-    hoje = datetime.today().date()
-    if recurso == 'conta':
-        inicio_mes = hoje.replace(day=1)
-        count = Conta.query.filter(
-            Conta.usuario_id == usuario.id,
-            Conta.criado_em >= inicio_mes
-        ).count()
-        return count < lim['contas_mes']
-    if recurso == 'conta_fixa':
-        return ContaFixa.query.filter_by(usuario_id=usuario.id).count() < lim['contas_fixas']
-    if recurso == 'lista':
-        return ListaCompras.query.filter_by(usuario_id=usuario.id).count() < lim['listas']
+    """Limites desativados durante o beta — todos os usuários têm acesso ilimitado."""
     return True
 
 # Modelo de Usuário
