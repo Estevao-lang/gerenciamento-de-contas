@@ -1,18 +1,13 @@
 // Script para manipulação de datas e melhorias de UX
 document.addEventListener('DOMContentLoaded', function() {
-    // Definir data mínima para o campo de data (hoje) — guarda com null check
     const campoData = document.getElementById('data_vencimento');
     if (campoData) {
-        const hoje = new Date().toISOString().split('T')[0];
-        // Não restringe passado: contas vencidas são válidas
         campoData.max = '';
     }
-    
-    // Atualizar contadores em tempo real
+
     const valorInput = document.getElementById('valor');
     if (valorInput) {
         valorInput.addEventListener('input', function(e) {
-            // Formatação em tempo real para moeda
             let value = e.target.value.replace(/\D/g, '');
             value = (value / 100).toFixed(2) + '';
             value = value.replace('.', ',');
@@ -21,8 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.target.value = value;
         });
     }
-    
-    // Adicionar máscara de moeda para campos de valor
+
     const valorFields = document.querySelectorAll('input[type="number"][step="0.01"]');
     valorFields.forEach(field => {
         field.addEventListener('blur', function() {
@@ -30,3 +24,84 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// ═══════════════════════════════════════════════════
+// FINBOT — Chatbot IA
+// ═══════════════════════════════════════════════════
+
+const finbotHistory = [];   // histórico da conversa (memória local)
+let finbotAberto = false;
+
+function finbotToggle() {
+    const win = document.getElementById('finbot-window');
+    const iconOpen  = document.getElementById('finbot-icon-open');
+    const iconClose = document.getElementById('finbot-icon-close');
+    if (!win) return;
+
+    finbotAberto = !finbotAberto;
+    win.style.display = finbotAberto ? 'flex' : 'none';
+    iconOpen.style.display  = finbotAberto ? 'none' : 'block';
+    iconClose.style.display = finbotAberto ? 'block' : 'none';
+
+    if (finbotAberto) {
+        setTimeout(() => document.getElementById('finbot-input')?.focus(), 150);
+        finbotScrollBottom();
+    }
+}
+
+function finbotScrollBottom() {
+    const msgs = document.getElementById('finbot-messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+}
+
+function finbotAdicionarMsg(texto, tipo) {
+    const msgs = document.getElementById('finbot-messages');
+    const div = document.createElement('div');
+    div.className = `finbot-msg ${tipo}`;
+    const span = document.createElement('span');
+    // Formata markdown simples
+    span.innerHTML = texto
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    div.appendChild(span);
+    msgs.appendChild(div);
+    finbotScrollBottom();
+    return div;
+}
+
+async function finbotEnviar() {
+    const input = document.getElementById('finbot-input');
+    const texto = input.value.trim();
+    if (!texto) return;
+
+    input.value = '';
+    input.disabled = true;
+    document.getElementById('finbot-send')?.setAttribute('disabled', true);
+
+    finbotAdicionarMsg(texto, 'user');
+    finbotHistory.push({ role: 'user', content: texto });
+
+    const loadingDiv = finbotAdicionarMsg('...', 'bot loading');
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: finbotHistory })
+        });
+        const data = await res.json();
+        loadingDiv.remove();
+
+        const resposta = data.response || data.error || 'Desculpe, não consegui responder agora.';
+        finbotAdicionarMsg(resposta, 'bot');
+        finbotHistory.push({ role: 'assistant', content: resposta });
+
+    } catch (e) {
+        loadingDiv.remove();
+        finbotAdicionarMsg('Erro de conexão. Tente novamente.', 'bot');
+    }
+
+    input.disabled = false;
+    document.getElementById('finbot-send')?.removeAttribute('disabled');
+    input.focus();
+}

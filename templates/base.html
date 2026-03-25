@@ -159,6 +159,32 @@
         </div>
     </footer>
 
+    <!-- ===== FINBOT — CHAT IA ===== -->
+    {% if current_user.is_authenticated %}
+    <div id="finbot-bubble" class="finbot-bubble" onclick="finbotToggle()" title="FinBot — Assistente IA">
+        <i class="bi bi-robot" id="finbot-icon-open"></i>
+        <i class="bi bi-x-lg" id="finbot-icon-close" style="display:none"></i>
+    </div>
+
+    <div id="finbot-window" class="finbot-window" style="display:none">
+        <div class="finbot-header">
+            <i class="bi bi-stars"></i> FinBot
+            <span class="ms-1" style="font-size:.72rem;opacity:.75;font-weight:400">Assistente IA</span>
+            <button class="finbot-close" onclick="finbotToggle()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div id="finbot-messages" class="finbot-messages">
+            <div class="finbot-msg bot">
+                <span>Olá! Sou o FinBot 👋<br>Posso analisar seus gastos, alertar vencimentos e dar dicas de economia. Como posso ajudar?</span>
+            </div>
+        </div>
+        <div class="finbot-input-row">
+            <input type="text" id="finbot-input" class="finbot-input" placeholder="Pergunte algo sobre suas finanças..."
+                   onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();finbotEnviar()}">
+            <button class="finbot-send" onclick="finbotEnviar()"><i class="bi bi-send-fill"></i></button>
+        </div>
+    </div>
+    {% endif %}
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 

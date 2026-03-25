@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from datetime import datetime, timedelta, date
@@ -220,6 +220,145 @@ def gerar_contas_fixas(usuario_id):
 
     if gerou:
         db.session.commit()
+
+def get_anthropic_client():
+    """Retorna cliente Anthropic ou None se não configurado."""
+    try:
+        import anthropic
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            return None
+        return anthropic.Anthropic(api_key=api_key)
+    except ImportError:
+        return None
+
+def contexto_financeiro(usuario_id):
+    """Monta resumo dos dados financeiros do usuário para o prompt da IA."""
+    hoje = datetime.today().date()
+
+    total_pago = db.session.query(func.sum(Conta.valor)).filter(
+        Conta.paga == True, Conta.usuario_id == usuario_id
+    ).scalar() or 0
+
+    total_pendente = db.session.query(func.sum(Conta.valor)).filter(
+        Conta.paga == False, Conta.usuario_id == usuario_id
+    ).scalar() or 0
+
+    gastos_cat = db.session.query(
+        Conta.categoria, func.sum(Conta.valor).label('total')
+    ).filter(
+        Conta.usuario_id == usuario_id, Conta.paga == True
+    ).group_by(Conta.categoria).order_by(func.sum(Conta.valor).desc()).limit(10).all()
+
+    proximas = Conta.query.filter(
+        Conta.usuario_id == usuario_id,
+        Conta.paga == False,
+        Conta.data_vencimento >= hoje
+    ).order_by(Conta.data_vencimento).limit(5).all()
+
+    fixas = ContaFixa.query.filter_by(usuario_id=usuario_id, ativa=True).all()
+    usuario = Usuario.query.get(usuario_id)
+
+    linhas = [
+        f"Usuário: {usuario.nome}",
+        f"Data atual: {hoje.strftime('%d/%m/%Y')}",
+        f"Saldo: {format_currency(usuario.saldo)}",
+        f"Total pago (histórico): {format_currency(total_pago)}",
+        f"Total pendente: {format_currency(total_pendente)}",
+        "",
+        "Gastos por categoria (pagos):",
+    ]
+    for cat, total in gastos_cat:
+        linhas.append(f"  - {cat}: {format_currency(float(total))}")
+
+    linhas += ["", "Próximas contas a pagar:"]
+    for c in proximas:
+        linhas.append(f"  - {c.descricao}: {format_currency(c.valor)} em {c.data_vencimento.strftime('%d/%m/%Y')}")
+
+    if not proximas:
+        linhas.append("  Nenhuma conta pendente")
+
+    linhas += ["", "Compromissos mensais fixos:"]
+    for cf in fixas:
+        linhas.append(f"  - {cf.descricao}: {format_currency(cf.valor)} ({cf.label_recorrencia}, dia {cf.dia_vencimento})")
+
+    if not fixas:
+        linhas.append("  Nenhuma conta fixa cadastrada")
+
+    return "\n".join(linhas)
+
+
+# ────────────────────────────────────────────────────────────
+# API: Chatbot IA
+# ────────────────────────────────────────────────────────────
+
+SYSTEM_CHAT = """Você é o FinBot, assistente financeiro pessoal integrado ao FinanceFlow.
+Você tem acesso aos dados financeiros reais do usuário e responde SEMPRE em português brasileiro.
+Seja direto, prático e levemente amigável. Use bullet points quando listar coisas.
+Você pode ajudar com: análise de gastos, dicas de economia, planejamento, alertas de vencimento e perguntas gerais sobre finanças pessoais.
+Nunca invente dados que não estejam no contexto fornecido. Se não souber algo, diga claramente.
+
+DADOS FINANCEIROS DO USUÁRIO:
+{contexto}"""
+
+@app.route('/api/chat', methods=['POST'])
+@login_required
+def api_chat():
+    client = get_anthropic_client()
+    if not client:
+        return jsonify({'error': 'IA não configurada. Adicione ANTHROPIC_API_KEY nas variáveis de ambiente.'}), 503
+
+    data = request.get_json(silent=True) or {}
+    messages = data.get('messages', [])
+    if not messages:
+        return jsonify({'error': 'Mensagem vazia'}), 400
+
+    # Limita histórico a 10 turnos para controlar custo
+    messages = messages[-10:]
+
+    try:
+        contexto = contexto_financeiro(current_user.id)
+        response = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=600,
+            system=SYSTEM_CHAT.format(contexto=contexto),
+            messages=messages
+        )
+        return jsonify({'response': response.content[0].text})
+    except Exception as e:
+        return jsonify({'error': f'Erro na IA: {str(e)}'}), 500
+
+
+@app.route('/api/analise-ia', methods=['POST'])
+@login_required
+def api_analise_ia():
+    client = get_anthropic_client()
+    if not client:
+        return jsonify({'error': 'IA não configurada. Adicione ANTHROPIC_API_KEY.'}), 503
+
+    try:
+        contexto = contexto_financeiro(current_user.id)
+        response = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=900,
+            messages=[{
+                'role': 'user',
+                'content': f"""Analise os dados financeiros abaixo e responda em português com:
+
+1. **Situação atual** — resumo em 2 linhas
+2. **Pontos de atenção** — até 3 itens importantes
+3. **Recomendações** — 3 ações práticas e específicas (com valores reais)
+4. **Previsão do próximo mês** — estimativa baseada nos dados
+
+Use os dados reais. Seja objetivo e direto.
+
+{contexto}"""
+            }]
+        )
+        return jsonify({'analise': response.content[0].text})
+    except Exception as e:
+        return jsonify({'error': f'Erro na IA: {str(e)}'}), 500
+
 
 def gerar_grafico_categorias(usuario_id):
     import matplotlib
